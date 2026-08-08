@@ -1,0 +1,17 @@
+container_id,carrier,container_type,warehouse,arrival_date,free_time_start,free_time_days,free_time_expiry,days_left,yard_slot,status,discharge_confirmed,dnd_days_accrued,booked_return_date,next_standard_slot,notes
+P-2041,Poseidón Freight,40HDRY,WH-BCN,2026-07-21,2026-07-21,14,2026-08-04,1,B-02,in_yard,yes,0,,2026-08-04,Free time expires Tue 04 Aug
+L-5518,Leviatán Lines,40HDRY,WH-BCN,2026-07-14,2026-07-14,21,2026-08-04,1,B-03,in_yard,yes,0,,2026-08-04,Free time expires Tue 04 Aug
+P-2044,Poseidón Freight,20DRY,WH-BCN,2026-07-23,2026-07-23,14,2026-08-06,3,B-05,in_yard,yes,0,2026-08-04,,Return already booked Tue 04 Aug
+L-5522,Leviatán Lines,40HDRY,WH-BCN,2026-07-16,2026-07-16,21,2026-08-06,3,B-06,in_yard,yes,0,2026-08-04,,Return already booked Tue 04 Aug
+P-2048,Poseidón Freight,40DRY,WH-BCN,2026-07-24,2026-07-24,14,2026-08-07,4,B-08,in_yard,yes,0,2026-08-04,,Return already booked Tue 04 Aug
+L-5530,Leviatán Lines,40HDRY,WH-BCN,2026-07-20,2026-07-20,21,2026-08-10,7,B-11,in_yard,yes,0,,2026-08-13,Next vendor slot falls 3 days after expiry
+L-5533,Leviatán Lines,20DRY,WH-BCN,2026-07-21,2026-07-21,21,2026-08-11,8,B-12,in_yard,yes,0,,2026-08-17,Next vendor slot falls 6 days after expiry
+P-2055,Poseidón Freight,40DRY,WH-BCN,2026-07-22,2026-07-22,14,2026-08-05,2,,awaiting_discharge,no,0,,,Vessel Cabo Ortegal berthing delayed at terminal. Free-time clock recorded as started 22 Jul but terminal has not confirmed discharge and no yard slot has been assigned
+P-2066,Poseidón Freight,40NOR,WH-BCN,2026-08-01,2026-08-01,,,,B-17,in_yard,yes,,,,Poseidón substituted a Non-Operating Reefer for the booked 40HDRY unit. Unit type not listed in carrier_contracts.md
+P-2051,Poseidón Freight,20DRY,WH-BCN,2026-07-27,2026-07-27,14,2026-08-10,7,B-19,in_yard,yes,0,2026-08-06,,Return already booked Thu 06 Aug
+L-5537,Leviatán Lines,40HDRY,WH-BCN,2026-07-27,2026-07-27,21,2026-08-17,14,B-21,in_yard,yes,0,2026-08-11,,Return already booked Tue 11 Aug
+L-5540,Leviatán Lines,40HDRY,WH-VLC,2026-07-25,2026-07-25,21,2026-08-15,12,V-04,in_yard,yes,0,2026-08-06,,Return already booked Thu 06 Aug
+P-2058,Poseidón Freight,20DRY,WH-VLC,2026-07-28,2026-07-28,14,2026-08-11,8,V-07,in_yard,yes,0,2026-08-05,,Return already booked Wed 05 Aug
+P-2060,Poseidón Freight,40DRY,WH-VLC,2026-07-30,2026-07-30,14,2026-08-13,10,V-09,in_yard,yes,0,2026-08-07,,Return already booked Fri 07 Aug
+L-5544,Leviatán Lines,20DRY,WH-VLC,2026-07-29,2026-07-29,21,2026-08-19,16,V-12,in_yard,yes,0,2026-08-10,,Return already booked Mon 10 Aug
+P-2063,Poseidón Freight,40HDRY,WH-VLC,2026-08-01,2026-08-01,14,2026-08-15,12,V-15,in_yard,yes,0,,2026-08-12,Standard slot available Wed 12 Aug - inside free time

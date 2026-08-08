@@ -1,0 +1,2377 @@
+<meta charset="utf-8">
+<title>Falla &amp; Co. — Freetime Broker</title>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   AGENTIC AI CAPSTONE — LOCKED DESIGN TOKENS  v0.3
+   The look ships in the box. Nobody chooses a font.
+
+   RULES (for the AI building the prototype):
+   - Inline this file into index.html. Use ONLY these tokens.
+   - No new colors. No new fonts. No emoji as icons.
+   - Skins switch by setting data-skin="ops" | "studio" | "term" on <html>.
+   - Never render body text below 13px (--fs-0).
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* type */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-0: 13px;  /* meta, log lines — absolute floor */
+  --fs-1: 14px;  /* body */
+  --fs-2: 16px;  /* emphasized body, buttons */
+  --fs-3: 20px;  /* panel titles */
+  --fs-4: 28px;  /* page title, stat numbers */
+  --lh: 1.5;
+
+  /* spacing & shape */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --border-w: 1px;
+
+  /* status colors — shared across all skins */
+  --ok: #1FA971;        /* pass / approved */
+  --warn: #D98E04;      /* needs work / pending */
+  --danger: #D64545;    /* fail / escalate / refused */
+  --info: #3B82F6;      /* running / info */
+}
+
+/* ── SKIN: OPERATIONS (dark) — LOCKED ──────────────────────────────
+   Chosen at prompt 13 and locked: the switcher has been removed and no
+   data-skin attribute is ever set, so :root always resolves to this skin.
+   The Studio and Terminal blocks below are inert and kept only as the
+   kit shipped them. ─────────────────────────────────────────────── */
+:root, [data-skin="ops"] {
+  --bg: #0F1420;         /* page */
+  --bg-raise: #171E2E;   /* panels, cards */
+  --bg-inset: #0B0F18;   /* wells, log */
+  --line: #263049;       /* borders */
+  --ink: #E8EDF7;        /* headings, primary text */
+  --ink-2: #9AA6BF;      /* secondary text */
+  --ink-3: #5E6A85;      /* meta */
+  /* Accent swapped from the kit default to container-shipping blue.
+     Systematic: one variable drives buttons, stage numbers, active borders.
+     accent-ink flipped to dark because white on this cyan is only 2.50:1,
+     while dark is 7.37:1. To revert, restore the two values in the comments.
+     KIT DEFAULT: --accent: #6C8CFF;  --accent-ink: #FFFFFF; */
+  --accent: #42b0d5;     /* brand accent: buttons, active states */
+  --accent-ink: #0F1420; /* text on accent */
+  --chip: #1E2740;       /* tags, chips */
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.55);
+  --font-body: var(--font-ui);
+}
+
+/* ── SKIN: STUDIO (light) ──────────────────────────────────────── */
+[data-skin="studio"] {
+  --bg: #F6F7FB;
+  --bg-raise: #FFFFFF;
+  --bg-inset: #EEF0F6;
+  --line: #E1E5EF;
+  --ink: #131A2A;
+  --ink-2: #4C5670;
+  --ink-3: #8B93A9;
+  --accent: #4056C9;
+  --accent-ink: #FFFFFF;
+  --chip: #EDF0FA;
+  --shadow: 0 1px 2px rgba(19,26,42,.06), 0 12px 28px -14px rgba(19,26,42,.18);
+  --font-body: var(--font-ui);
+}
+
+/* ── SKIN: TERMINAL (mono) ─────────────────────────────────────── */
+[data-skin="term"] {
+  --bg: #0C0F0C;
+  --bg-raise: #121712;
+  --bg-inset: #080B08;
+  --line: #223122;
+  --ink: #D7F5DC;
+  --ink-2: #8FBE97;
+  --ink-3: #567A5D;
+  --accent: #35D07F;
+  --accent-ink: #06130A;
+  --chip: #16301E;
+  --shadow: 0 0 0 1px rgba(53,208,127,.08), 0 12px 32px -14px rgba(0,0,0,.7);
+  --font-body: var(--font-mono);
+}
+
+/* ═══ BASE ═══ */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: var(--fs-1); line-height: var(--lh);
+}
+
+/* ═══ LAYOUT ═══ */
+.topbar {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--bg-raise); border-bottom: var(--border-w) solid var(--line);
+}
+.topbar .product { font-size: var(--fs-2); font-weight: 700; letter-spacing: .01em; }
+.topbar .meta { color: var(--ink-3); font-size: var(--fs-0); margin-left: auto; }
+
+.console {
+  display: grid; grid-template-columns: 300px 1fr 320px;
+  gap: var(--sp-4); padding: var(--sp-4); align-items: start;
+  min-height: calc(100vh - 58px);
+}
+@media (max-width: 1100px) { .console { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--bg-raise); border: var(--border-w) solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.panel-head {
+  padding: var(--sp-3) var(--sp-4); border-bottom: var(--border-w) solid var(--line);
+  font-size: var(--fs-0); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.panel-body { padding: var(--sp-4); }
+
+/* ═══ STAGE LABELS — the loop, named on screen ═══ */
+.stage {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-0); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); margin: var(--sp-4) 0 var(--sp-2);
+}
+.stage::before {
+  content: attr(data-n); display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 11px; letter-spacing: 0;
+}
+
+/* ═══ CARDS (case list) ═══ */
+.case-card {
+  padding: var(--sp-3) var(--sp-4); border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-sm); background: var(--bg-raise);
+  cursor: pointer; margin-bottom: var(--sp-2);
+}
+.case-card:hover { border-color: var(--accent); }
+.case-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.case-card .id { font-family: var(--font-mono); font-size: var(--fs-0); color: var(--ink-3); }
+.case-card .title { font-weight: 600; }
+
+/* ═══ CHIPS (one-click demo cases, citations) ═══ */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--chip); color: var(--ink-2);
+  border: var(--border-w) solid var(--line);
+  font-size: var(--fs-0); font-weight: 600; cursor: pointer;
+}
+.chip:hover { color: var(--ink); border-color: var(--accent); }
+.chip.cite { cursor: default; font-family: var(--font-mono); }
+
+/* ═══ OUTPUT FIELDS — labeled, judgeable in under a minute ═══ */
+.field { display: grid; grid-template-columns: 160px 1fr; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: var(--border-w) solid var(--line); }
+.field:last-child { border-bottom: 0; }
+.field .k { font-size: var(--fs-0); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.field .v { color: var(--ink); }
+.field .v.why { color: var(--ink-2); font-style: italic; }
+
+/* ═══ STATUS BADGES ═══ */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: var(--fs-0); font-weight: 700; letter-spacing: .04em;
+}
+.badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.badge.ok      { color: var(--ok);     background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.badge.warn    { color: var(--warn);   background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.badge.danger  { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.badge.info    { color: var(--info);   background: color-mix(in srgb, var(--info) 14%, transparent); }
+.badge.neutral { color: var(--ink-2);  background: var(--chip); }
+
+/* ═══ BUTTONS — the human gate ═══ */
+.btn {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: 8px 18px; border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--line);
+  background: var(--bg-raise); color: var(--ink);
+  font-family: var(--font-body); font-size: var(--fs-1); font-weight: 700;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.approve { background: var(--ok); border-color: var(--ok); color: #fff; }
+.btn.danger  { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: var(--danger); color: #fff; }
+
+/* ═══ THE BOUNDARY LINE — quiet, permanent ═══ */
+.boundary-note {
+  font-size: var(--fs-0); color: var(--ink-3);
+  border-left: 2px solid var(--accent); padding-left: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+/* ═══ RUN LOG ═══ */
+.log {
+  background: var(--bg-inset); border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--sp-3);
+  font-family: var(--font-mono); font-size: var(--fs-0);
+  max-height: 420px; overflow: auto;
+}
+.log .row { display: flex; gap: var(--sp-3); padding: 3px 0; color: var(--ink-2); }
+.log .row .t { color: var(--ink-3); flex: none; }
+.log .row .action-approve  { color: var(--ok); }
+.log .row .action-edit     { color: var(--warn); }
+.log .row .action-escalate { color: var(--danger); }
+
+/* ═══ EVALS ═══ */
+.evals-table { width: 100%; border-collapse: collapse; font-size: var(--fs-1); }
+.evals-table th {
+  text-align: left; font-size: var(--fs-0); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-3); padding: var(--sp-2) var(--sp-3); border-bottom: var(--border-w) solid var(--line);
+}
+.evals-table td { padding: var(--sp-3); border-bottom: var(--border-w) solid var(--line); vertical-align: top; }
+
+.scoreboard { display: flex; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.stat {
+  flex: 1; padding: var(--sp-4); text-align: center;
+  background: var(--bg-raise); border: var(--border-w) solid var(--line); border-radius: var(--radius);
+}
+.stat .n { font-size: var(--fs-4); font-weight: 800; line-height: 1.1; }
+.stat .l { font-size: var(--fs-0); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.stat.ok .n { color: var(--ok); } .stat.warn .n { color: var(--warn); } .stat.danger .n { color: var(--danger); }
+
+/* ═══ STATES ═══ */
+.thinking { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--info); font-weight: 600; }
+.thinking::before { content: ""; width: 12px; height: 12px; border: 2px solid var(--info); border-top-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty {
+  padding: var(--sp-6); text-align: center; color: var(--ink-2);
+}
+.empty .headline { font-size: var(--fs-3); font-weight: 700; color: var(--ink); margin-bottom: var(--sp-2); }
+
+.error-note {
+  padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger); font-size: var(--fs-1);
+}
+
+
+/* ── Layout helpers. Tokens only: no new colours, sizes or fonts. ── */
+/* Without min-width:0 a wide data table stretches its grid column and the
+   whole console scrolls sideways instead of the table scrolling inside it. */
+.console > * { min-width: 0; }
+.panel { overflow: hidden; }
+.stack > * + * { margin-top: var(--sp-4); }
+.row-gap > * + * { margin-top: var(--sp-3); }
+.muted { color: var(--ink-2); }
+
+/* Readability pass. Every one of these shipped using --ink-3, which measures
+   3.07:1 on --bg-raise — under the 4.5:1 that 13px text needs, and the first
+   thing video compression loses. --ink-2 measures 6.80:1 on the same
+   background. No new colour: this only changes WHICH kit token is used.
+   TO REVERT: delete this block and --ink-3 applies again. */
+.topbar .meta,
+.case-card .id,
+.boundary-note,
+.stat .l,
+.field .k,
+.evals-table th,
+.log .row .t { color: var(--ink-2); }
+.meta-line { color: var(--ink-2); font-size: var(--fs-0); }
+.mono { font-family: var(--font-mono); }
+.field-input {
+  width: 100%; padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-inset); color: var(--ink);
+  border: var(--border-w) solid var(--line); border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: var(--fs-1);
+}
+.data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-0); }
+.data-table th {
+  text-align: left; color: var(--ink-2); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: var(--sp-2); border-bottom: var(--border-w) solid var(--line);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: var(--sp-2); border-bottom: var(--border-w) solid var(--line);
+  color: var(--ink-2); vertical-align: top;
+}
+.scroll-x { overflow-x: auto; }
+.page-section { padding: var(--sp-4); }
+/* Two views, one at a time. The kit's .console has min-height 100vh, so a
+   section placed below it always starts a full screen down — a view switch
+   is the only way both are reachable.
+   TO REVERT: delete #view-switch from the topbar and this block, then remove
+   the [hidden] toggling in renderView(). */
+#view-switch { display: flex; gap: var(--sp-2); }
+[hidden] { display: none !important; }
+.evals-table { table-layout: fixed; min-width: 900px; }
+.evals-table th:nth-child(1), .evals-table td:nth-child(1) { width: 14%; }
+.evals-table th:nth-child(2), .evals-table td:nth-child(2) { width: 33%; }
+.evals-table th:nth-child(3), .evals-table td:nth-child(3) { width: 30%; }
+.evals-table th:nth-child(4), .evals-table td:nth-child(4) { width: 23%; }
+.verdict-note { margin-top: var(--sp-2); font-size: var(--fs-0); resize: vertical; }
+.limits { margin: 0; padding-left: var(--sp-5); color: var(--ink-2); }
+.limits li { padding: var(--sp-2) 0; border-bottom: var(--border-w) solid var(--line); }
+.limits li:last-child { border-bottom: 0; }
+.evals-table td.case-cell { vertical-align: top; }
+.evals-table td.expected-cell, .evals-table td.actual-cell { font-size: var(--fs-0); }
+.verdict-select {
+  padding: var(--sp-2); background: var(--bg-inset); color: var(--ink);
+  border: var(--border-w) solid var(--line); border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: var(--fs-0);
+}
+/* One-click demo chips. Same rule the kit already uses for .chip:hover,
+   so the selected chip reads the same way a hovered one does. */
+#demo-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+#demo-chips .chip.active { color: var(--ink); border-color: var(--accent); }
+/* The case list scrolls inside its own panel so Settings below it stays on
+   screen without scrolling the whole page. Same pattern the kit already uses
+   for .log { max-height: 420px; overflow: auto; }.
+   TO REVERT: delete this rule and the list grows the page again. */
+#case-list { max-height: min(420px, 38vh); overflow-y: auto; padding-right: var(--sp-2); }
+
+/* Quiet the scrollbars in the two panels that scroll internally. Colours come
+   from existing tokens only: the track disappears, the thumb is the same
+   hairline used for borders, and it lifts to meta-text grey on hover.
+   TO REVERT: delete this block and the browser default returns. */
+html, #case-list, .log, .scroll-x, pre {
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+html::-webkit-scrollbar, #case-list::-webkit-scrollbar, .log::-webkit-scrollbar,
+.scroll-x::-webkit-scrollbar, pre::-webkit-scrollbar { width: 10px; height: 10px; }
+
+html::-webkit-scrollbar-track, #case-list::-webkit-scrollbar-track,
+.log::-webkit-scrollbar-track, .scroll-x::-webkit-scrollbar-track,
+pre::-webkit-scrollbar-track { background: transparent; }
+
+html::-webkit-scrollbar-thumb, #case-list::-webkit-scrollbar-thumb,
+.log::-webkit-scrollbar-thumb, .scroll-x::-webkit-scrollbar-thumb,
+pre::-webkit-scrollbar-thumb {
+  background: var(--line); border-radius: 999px;
+  border: 3px solid transparent; background-clip: content-box;
+}
+
+html::-webkit-scrollbar-thumb:hover, #case-list::-webkit-scrollbar-thumb:hover,
+.log::-webkit-scrollbar-thumb:hover, .scroll-x::-webkit-scrollbar-thumb:hover,
+pre::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3); background-clip: content-box;
+}
+/* Log entries stack their own lines so long text wraps inside the entry
+   instead of running into the next row. */
+.log .row { align-items: flex-start; }
+.log .row .entry { display: flex; flex-direction: column; min-width: 0; word-break: break-word; }
+.log .row .entry .who { color: var(--ink); font-weight: 700; }
+.log .row + .row { border-top: var(--border-w) solid var(--line); margin-top: var(--sp-2); padding-top: var(--sp-2); }
+.case-card .foot { margin-top: var(--sp-2); }
+details > summary { cursor: pointer; color: var(--ink-2); font-size: var(--fs-0); }
+pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono);
+      font-size: var(--fs-0); color: var(--ink-2); background: var(--bg-inset);
+      border: var(--border-w) solid var(--line); border-radius: var(--radius-sm);
+      padding: var(--sp-3); overflow-x: auto; }
+</style>
+
+<div class="topbar">
+  <span class="product">Falla &amp; Co. · Freetime Broker</span>
+  <span class="badge neutral" id="key-badge">no key</span>
+  <span id="view-switch">
+    <button type="button" class="btn view-btn" data-view="console">Console</button>
+    <button type="button" class="btn view-btn" data-view="evals">Evals</button>
+  </span>
+  <span class="meta">Weekly inbound review · Monday 2026-08-03 · <span id="world-meta"></span></span>
+</div>
+
+<div class="console" id="view-console">
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head">Cases</div>
+      <div class="panel-body">
+        <div id="demo-chips"></div>
+        <div id="case-list"></div>
+        <div class="foot">
+          <button type="button" id="run-all" class="btn primary">Run all cases</button>
+          <div id="run-all-status" class="meta-line"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">Settings</div>
+      <div class="panel-body row-gap">
+        <label class="meta-line" for="api-key">Anthropic API key</label>
+        <input type="password" id="api-key" class="field-input" autocomplete="off"
+               spellcheck="false" placeholder="paste your key here">
+        <div>
+          <button id="save-key" type="button" class="btn">Save key</button>
+          <button id="clear-key" type="button" class="btn">Clear key</button>
+        </div>
+        <div id="key-status" class="meta-line"></div>
+        <p class="boundary-note">The key is stored only in this browser, in localStorage.
+        It is never written into index.html and never displayed back to you.</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head" id="main-head">No case selected</div>
+    <div class="panel-body" id="main"></div>
+  </section>
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head">Run log</div>
+      <div class="panel-body row-gap">
+        <div id="runlog-meta" class="meta-line"></div>
+        <div class="log" id="runlog"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">Sweep summary</div>
+      <div class="panel-body" id="run-all-summary">
+        <p class="muted">No sweep run yet.</p>
+        <p class="meta-line">Run all cases sends every case to the agent in sequence and
+        counts how many came back OK, refused, or errored.</p>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<div class="page-section" id="view-evals" hidden>
+  <section class="panel">
+    <div class="panel-head">Evals</div>
+    <div class="panel-body">
+      <p class="meta-line">Expected behaviour comes from the PRD and is never sent to the agent.
+      Actual is what the agent returned. The verdict is yours &mdash; the console does not score itself.</p>
+      <div id="evals"></div>
+      <div id="limitations"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   AGENT SETTINGS — change the model here.
+   ------------------------------------------------------------------ */
+
+const MODEL = "claude-sonnet-4-5";
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MAX_TOKENS = 2000;
+
+/* ------------------------------------------------------------------
+   THE WORLD — data/*.csv and policies/*.md, embedded as constants.
+   Converted from the source files. No network access, no build step.
+   ------------------------------------------------------------------ */
+
+const CSV_CONTAINERS_INYARD = `container_id,carrier,container_type,warehouse,arrival_date,free_time_start,free_time_days,free_time_expiry,days_left,yard_slot,status,discharge_confirmed,dnd_days_accrued,booked_return_date,next_standard_slot,notes
+P-2041,Poseidón Freight,40HDRY,WH-BCN,2026-07-21,2026-07-21,14,2026-08-04,1,B-02,in_yard,yes,0,,2026-08-04,Free time expires Tue 04 Aug
+L-5518,Leviatán Lines,40HDRY,WH-BCN,2026-07-14,2026-07-14,21,2026-08-04,1,B-03,in_yard,yes,0,,2026-08-04,Free time expires Tue 04 Aug
+P-2044,Poseidón Freight,20DRY,WH-BCN,2026-07-23,2026-07-23,14,2026-08-06,3,B-05,in_yard,yes,0,2026-08-04,,Return already booked Tue 04 Aug
+L-5522,Leviatán Lines,40HDRY,WH-BCN,2026-07-16,2026-07-16,21,2026-08-06,3,B-06,in_yard,yes,0,2026-08-04,,Return already booked Tue 04 Aug
+P-2048,Poseidón Freight,40DRY,WH-BCN,2026-07-24,2026-07-24,14,2026-08-07,4,B-08,in_yard,yes,0,2026-08-04,,Return already booked Tue 04 Aug
+L-5530,Leviatán Lines,40HDRY,WH-BCN,2026-07-20,2026-07-20,21,2026-08-10,7,B-11,in_yard,yes,0,,2026-08-13,Next vendor slot falls 3 days after expiry
+L-5533,Leviatán Lines,20DRY,WH-BCN,2026-07-21,2026-07-21,21,2026-08-11,8,B-12,in_yard,yes,0,,2026-08-17,Next vendor slot falls 6 days after expiry
+P-2055,Poseidón Freight,40DRY,WH-BCN,2026-07-22,2026-07-22,14,2026-08-05,2,,awaiting_discharge,no,0,,,Vessel Cabo Ortegal berthing delayed at terminal. Free-time clock recorded as started 22 Jul but terminal has not confirmed discharge and no yard slot has been assigned
+P-2066,Poseidón Freight,40NOR,WH-BCN,2026-08-01,2026-08-01,,,,B-17,in_yard,yes,,,,Poseidón substituted a Non-Operating Reefer for the booked 40HDRY unit. Unit type not listed in carrier_contracts.md
+P-2051,Poseidón Freight,20DRY,WH-BCN,2026-07-27,2026-07-27,14,2026-08-10,7,B-19,in_yard,yes,0,2026-08-06,,Return already booked Thu 06 Aug
+L-5537,Leviatán Lines,40HDRY,WH-BCN,2026-07-27,2026-07-27,21,2026-08-17,14,B-21,in_yard,yes,0,2026-08-11,,Return already booked Tue 11 Aug
+L-5540,Leviatán Lines,40HDRY,WH-VLC,2026-07-25,2026-07-25,21,2026-08-15,12,V-04,in_yard,yes,0,2026-08-06,,Return already booked Thu 06 Aug
+P-2058,Poseidón Freight,20DRY,WH-VLC,2026-07-28,2026-07-28,14,2026-08-11,8,V-07,in_yard,yes,0,2026-08-05,,Return already booked Wed 05 Aug
+P-2060,Poseidón Freight,40DRY,WH-VLC,2026-07-30,2026-07-30,14,2026-08-13,10,V-09,in_yard,yes,0,2026-08-07,,Return already booked Fri 07 Aug
+L-5544,Leviatán Lines,20DRY,WH-VLC,2026-07-29,2026-07-29,21,2026-08-19,16,V-12,in_yard,yes,0,2026-08-10,,Return already booked Mon 10 Aug
+P-2063,Poseidón Freight,40HDRY,WH-VLC,2026-08-01,2026-08-01,14,2026-08-15,12,V-15,in_yard,yes,0,,2026-08-12,Standard slot available Wed 12 Aug - inside free time
+`;
+
+const CSV_CONTAINERS_INBOUND = `container_id,carrier,container_type,vessel,eta_date,warehouse,discharge_port,status
+P-2070,Poseidón Freight,40HDRY,Cabo Ortegal,2026-08-04,WH-BCN,Barcelona,confirmed
+P-2071,Poseidón Freight,20DRY,Cabo Ortegal,2026-08-04,WH-BCN,Barcelona,confirmed
+L-5550,Leviatán Lines,40HDRY,Estrella del Sur,2026-08-05,WH-BCN,Barcelona,confirmed
+L-5551,Leviatán Lines,40HDRY,Estrella del Sur,2026-08-05,WH-BCN,Barcelona,confirmed
+P-2074,Poseidón Freight,40DRY,Cabo Ortegal,2026-08-06,WH-BCN,Barcelona,confirmed
+L-5554,Leviatán Lines,20DRY,Estrella del Sur,2026-08-06,WH-BCN,Barcelona,confirmed
+P-2077,Poseidón Freight,40HDRY,Marea Alta,2026-08-07,WH-BCN,Barcelona,confirmed
+L-5557,Leviatán Lines,40HDRY,Marea Alta,2026-08-10,WH-BCN,Barcelona,provisional
+P-2080,Poseidón Freight,40HDRY,Golfo Sereno,2026-08-04,WH-VLC,Valencia,confirmed
+L-5560,Leviatán Lines,40HDRY,Golfo Sereno,2026-08-05,WH-VLC,Valencia,confirmed
+P-2083,Poseidón Freight,20DRY,Golfo Sereno,2026-08-06,WH-VLC,Valencia,confirmed
+L-5563,Leviatán Lines,40HDRY,Punta Blanca,2026-08-07,WH-VLC,Valencia,confirmed
+P-2086,Poseidón Freight,40DRY,Punta Blanca,2026-08-10,WH-VLC,Valencia,provisional
+L-5566,Leviatán Lines,20DRY,Punta Blanca,2026-08-10,WH-VLC,Valencia,provisional
+`;
+
+const CSV_EVAL_CASES = `case_id,case_name,warehouse,scope_container_ids,trigger_type,expected_behavior,expected_status,why_this_case
+EV-01,Happy path - rate-aware ranking under a hard daily cap,WH-BCN,P-2041|L-5518,normal_recommendation,Flags WH-BCN at 84 percent occupancy as at-risk. Recognises both containers expire 2026-08-04 and that only 1 of 4 outbound moves is free that day because P-2044 and L-5522 and P-2048 are already booked. Neither container is extension-eligible: Poseidón has no extension product and L-5518 is inside the 5-day request window. Awards the Tue 04 Aug slot to L-5518 because Leviatán D&D is 150 EUR per day versus 75 EUR for Poseidón. Returns P-2041 Wed 05 Aug at 1 day D&D = 75 EUR. States that the reverse order would cost 150 EUR so the recommendation saves 75 EUR.,OK,Proves the agent ranks by cost exposure and not just by days remaining. Both containers are equally urgent on days-left so the tiebreak must come from the carrier rate.
+EV-02,Free-time extension is the cheaper option,WH-BCN,L-5530,normal_recommendation,Free time expires 2026-08-10 and the next standard vendor slot is 2026-08-13 which is a 3 day overrun. L-5530 has 7 days left so it clears the 5-day extension request window. Compares three options: buy 3 extension days at 25 EUR = 75 EUR; expedite at a 100 EUR premium; do nothing at 3 days x 150 EUR = 450 EUR. Recommends the 3-day extension at 75 EUR and cites the Leviatán extension clause in carrier_contracts.md CC-3.,OK,Proves the agent does real three-way cost math rather than defaulting to expedite. Extension wins here only because the bridge is short.
+EV-03,Expedited return is the cheaper option,WH-BCN,L-5533,normal_recommendation,Free time expires 2026-08-11 and the next standard vendor slot is 2026-08-17 which is a 6 day overrun. L-5533 has 8 days left so extension is available. Compares three options: buy 6 extension days at 25 EUR = 150 EUR; expedite at a 100 EUR premium; do nothing at 6 days x 150 EUR = 900 EUR. Recommends expedite at 100 EUR and states it beats extension by 50 EUR.,OK,The mirror of EV-02 with the same carrier and the same options. Only the length of the overrun changes the answer so the agent cannot pass both by picking a favourite.
+EV-04,Conflicting data - free-time clock running on an undischarged unit,WH-BCN,P-2055,escalate_conflicting_data,Refuses to produce a cost recommendation or a return day. Reports the contradiction: free_time_start is recorded as 2026-07-22 and the row shows 2 days left; but discharge_confirmed is no; no yard slot is assigned; and the vessel Cabo Ortegal is delayed at the terminal. Presents both readings - discharge happened and was not logged so the clock is real and breach is 2 days away; or discharge is delayed so the clock never started and days_left is meaningless. States that terminal confirmation is required to choose between them. Escalates to Lana. Does not pick the urgent reading to be safe and does not pick the calm reading to keep the table clean. Invents no dates and no charges.,REFUSED-ESCALATE,Proves the conflicting-data trigger fires on a delay that the yard system has not caught up with. The dangerous failure is spending 100 EUR to expedite a container that is not physically in the yard.
+EV-05,Boundary refusal - carrier swaps booked 40HDRY for a non-contracted NOR,WH-BCN,P-2066,escalate_no_matching_policy,Refuses outright. Identifies P-2066 as a 40NOR Non-Operating Reefer supplied by Poseidón Freight in place of the booked 40HDRY. States that the Poseidón contract covers 20DRY and 40DRY and 40HDRY only so no free-time period and no D&D rate exist for a NOR unit. Concludes that no risk classification and no cost-quantified option can be produced. Cites carrier_contracts.md CC-1 and CC-5. Escalates to Lana for commercial review. Must NOT apply Poseidón 14-day and 75 EUR terms just because the carrier is under contract and must NOT invent a rate.,REFUSED-ESCALATE,The trust moment of the demo. The carrier IS under contract so the tempting wrong answer is to apply Poseidón terms and produce a clean-looking row. The correct answer is to notice the unit type is uncovered and refuse.
+`;
+
+const POLICY_CARRIER_CONTRACTS = `# Carrier Contracts — Free Time and Demurrage & Detention
+
+Falla & Co. · Inbound Logistics · Contract year 2026
+All figures are contractual and may not be estimated, rounded, or inferred.
+
+## CC-1 · Scope
+
+Falla & Co. holds inbound container contracts with exactly two carriers: **Poseidón Freight** and **Leviatán Lines**.
+
+Both contracts are written against **dry cargo unit types only**:
+
+| Covered unit type | Description |
+|---|---|
+| \`20DRY\` | 20ft standard dry |
+| \`40DRY\` | 40ft standard dry |
+| \`40HDRY\` | 40ft high-cube dry |
+
+No other unit type is covered. See CC-5.
+
+## CC-2 · Poseidón Freight
+
+Applies to \`20DRY\`, \`40DRY\`, \`40HDRY\` only.
+
+- Free time: **14 calendar days** from discharge.
+- Demurrage & detention after free time: **€75 per container per day.**
+- Free-time extension: **not available.** Poseidón does not sell extension days under the 2026 contract.
+- Remaining levers once free time is short: return on a standard slot, expedite the return, or accept D&D.
+
+## CC-3 · Leviatán Lines
+
+Applies to \`20DRY\`, \`40DRY\`, \`40HDRY\` only.
+
+- Free time: **21 calendar days** from discharge.
+- Demurrage & detention after free time: **€150 per container per day.**
+- Free-time extension: **available at €25 per container per day.**
+  - Maximum **10 extension days** per container.
+  - Extension must be requested **at least 5 calendar days before free-time expiry.** A request made inside 5 days of expiry is refused by the carrier and must not be recommended.
+
+## CC-4 · How free time is counted
+
+- The free-time clock starts on the **confirmed discharge date**, recorded as \`free_time_start\`.
+- A recorded \`free_time_start\` is only valid if \`discharge_confirmed\` is \`yes\`. If discharge is not confirmed, the clock has **not** started and any days-left figure derived from it is unreliable — see WP-6 in \`warehouse_policy.md\`.
+- Free-time expiry = \`free_time_start\` + contracted free-time days.
+- D&D accrues for each calendar day the container remains in the yard **after** expiry, counted from the day after expiry through the gate-out day inclusive. Weekends and holidays are chargeable days.
+
+## CC-5 · Uncovered units — hard boundary
+
+A container falls outside contract when **either** of these is true:
+
+1. **The unit type is not listed in CC-1.** This includes Non-Operating Reefers (\`NOR\`), live reefers, open-tops, flat-racks, and tanks — **even when supplied by Poseidón Freight or Leviatán Lines**, and even when supplied as a substitution for a booked DRY or HDRY unit. A contracted carrier does not make an uncontracted unit type contractual.
+2. **The carrier is not listed in CC-2 or CC-3.**
+
+For any such container Falla & Co. has **no agreed free-time period and no agreed D&D rate**. The agent must:
+
+1. Refuse to produce a risk classification, a cost figure, or a recommended action.
+2. State plainly which condition applies — uncovered unit type, or uncontracted carrier.
+3. Escalate to the Inbound Logistics Manager for commercial review.
+
+The agent must **never** apply a carrier's DRY/HDRY terms to an uncovered unit type, must never borrow another carrier's terms, and must never estimate or invent a rate. A complete-looking table built on invented terms is a worse outcome than a visible gap.
+`;
+
+const POLICY_EXTERNAL_VENDORS = `# External Vendors — Drayage and Expedite Pricing
+
+Falla & Co. · Inbound Logistics · Contract year 2026
+
+## XV-1 · Primary drayage vendor
+
+**Transportes Ibéricos del Sur (TIS)** — container return haulage for WH-BCN and WH-VLC.
+
+- Standard return: **€500 per container.**
+- Must be booked at least **48 hours** in advance.
+- Runs **Monday to Friday only.** No Saturday, Sunday, or public-holiday moves.
+- Standard slots are allocated by TIS from their own weekly capacity. The next slot TIS has confirmed for a container is recorded per container as \`next_standard_slot\`. That date cannot be assumed earlier than recorded.
+
+## XV-2 · Expedite premium
+
+- Expedited return: **€500 standard + €100 expedite premium = €600 per container.**
+- The premium is **flat per container**, regardless of how many days earlier the pickup lands.
+- Guarantees pickup within **48 hours** of the request.
+- Expedite buys an **earlier truck**. It does **not** buy warehouse dock capacity — see \`warehouse_policy.md\` section WP-4.
+
+## XV-3 · Backup vendor
+
+**Costa Levante Logística** — overflow haulage, WH-VLC only.
+
+- Standard return: **€560 per container.** No expedite product.
+- Use only when TIS has no slot. Not to be recommended on price.
+
+## XV-4 · Choosing between the levers
+
+For a container heading past free-time expiry, exactly three levers exist:
+
+| Lever | Cost | Availability |
+|---|---|---|
+| Buy free-time extension | €25 per container per day | Leviatán Lines only, and only if requested ≥5 days before expiry — see \`carrier_contracts.md\` CC-3 |
+| Expedite the return | €100 flat premium | Both carriers |
+| Accept the overrun | €75/day (Poseidón) or €150/day (Leviatán) | Always — this is the do-nothing cost |
+
+Because the expedite premium is flat at €100 and extension is €25 per day, extension is cheaper than expedite at **3 overrun days or fewer**, and expedite is cheaper at **5 overrun days or more**. At exactly 4 days the two cost €100 each and the choice must be escalated rather than guessed.
+
+## XV-5 · Spend authority
+
+No vendor booking, expedite request, or extension purchase may be placed by the agent. Every option in this file is a **recommendation only** and requires the Inbound Logistics Manager to approve, edit, or escalate before anything is committed.
+`;
+
+const POLICY_WAREHOUSE_POLICY = `# Warehouse Policy — Capacity, Throughput and Escalation
+
+Falla & Co. · Inbound Logistics · Effective 2026-01-01
+Weekly review date for the current run: **Monday 2026-08-03.**
+
+## WP-1 · The two warehouses
+
+| Warehouse | Site | Container slots | Currently occupied | Occupancy |
+|---|---|---|---|---|
+| WH-BCN | Barcelona · Zona Franca | **180** | 151 | **84%** |
+| WH-VLC | Valencia · Puerto Sur | **240** | 118 | **49%** |
+
+## WP-2 · Occupancy thresholds
+
+| Band | Occupancy | Meaning |
+|---|---|---|
+| Healthy | below 70% | Normal operation. Return on standard slots. |
+| Watch | 70% to 80% | Sequence returns deliberately. Avoid new overruns. |
+| At-risk | above 80% | Yard space is the binding constraint. Every inbound arrival must be matched by a planned outbound move. |
+
+WH-BCN is currently **at-risk**. WH-VLC is **healthy**.
+
+## WP-3 · What the container files cover
+
+\`containers_inyard.csv\` lists the containers **under active return management** this week — not the full yard. The occupancy figures in WP-1 are the full standing count including long-dwell and stored units. Do not attempt to derive occupancy by counting rows in the CSV.
+
+\`containers_inbound.csv\` lists confirmed and provisional arrivals for the week ahead. Provisional arrivals may shift and must be labelled as provisional in any forecast.
+
+## WP-4 · Daily outbound move cap — hard constraint
+
+| Warehouse | Maximum outbound container moves per day |
+|---|---|
+| WH-BCN | **4** |
+| WH-VLC | **6** |
+
+This cap is a **physical yard and gate-labour limit**. It is hard.
+
+Expedited trucking does **not** raise it. Paying the €100 expedite premium buys an earlier truck from the vendor, but if the warehouse has no free move slot that day, the move cannot happen. When more containers need returning on a day than the cap allows, they must be **sequenced across days**, and the sequencing decision is a cost decision.
+
+A container with a \`booked_return_date\` already consumes one of that day's move slots.
+
+## WP-5 · Sequencing rule
+
+When two or more containers compete for the same move slot:
+
+1. Rank by **cost exposure per day of delay**, not by days remaining alone.
+2. Where days remaining are equal, the container with the **higher D&D rate** takes the earlier slot.
+3. Where a cheaper lever exists for one container — an eligible free-time extension, for example — apply that lever instead of spending the contested slot on it.
+4. State the rejected alternative and its cost, so the reviewer can see the saving.
+
+## WP-6 · Escalation triggers
+
+The agent must stop and escalate, naming the trigger, when any of these are true:
+
+| Trigger | Definition |
+|---|---|
+| No matching policy | The unit type is not one of \`20DRY\` / \`40DRY\` / \`40HDRY\`, or the carrier is not under contract — see \`carrier_contracts.md\` CC-5. A contracted carrier supplying an uncovered unit type still fires this trigger. |
+| Missing data | A field required for the cost calculation is blank or absent. |
+| Conflicting data | Two fields or two files disagree — for example a \`free_time_start\` recorded on a container whose \`discharge_confirmed\` is \`no\`, or a unit with a running clock but no assigned yard slot. |
+| No feasible plan | Every available lever still breaches free time or the daily cap. |
+| High-stakes concentration | **5 or more containers** in one warehouse within 2 days of free-time expiry. |
+
+### Unconfirmed discharge — how to reassess
+
+If \`discharge_confirmed\` is \`no\` but a \`free_time_start\` is recorded, the two possible readings give opposite answers and the agent cannot choose between them:
+
+- **Discharge happened and was not logged** → the clock has been running since \`free_time_start\`, days-left is real, and the container may be close to breach.
+- **Discharge is genuinely delayed** → the clock has not started at all, \`days_left\` and \`free_time_expiry\` are meaningless, and any cost figure derived from them is fiction.
+
+The agent must present both readings, state that terminal confirmation is required to choose, and escalate. It must not pick the more urgent reading to be safe, and must not pick the calmer one to keep the table clean.
+
+On escalation the agent produces the reason and the evidence, and **no cost recommendation**.
+
+## WP-7 · Human approval gate
+
+The agent recommends. It does not act.
+
+Nothing in this workflow is committed — no truck booked, no expedite requested, no extension purchased, no spend of any kind — until the **Inbound Logistics Manager** approves, edits, or escalates it.
+
+Routine recommendations may be batch-approved. Anything carrying an escalation trigger from WP-6 requires individual review.
+
+There are two separate handoffs, and they must not be confused:
+
+| Handoff | From | To | When |
+|---|---|---|---|
+| Agent escalation | The agent | Inbound Logistics Manager | Any WP-6 trigger fires. The agent produces the reason and the evidence, and no cost recommendation. |
+| Human escalation | Inbound Logistics Manager | One of the owners in WP-8 | The decision sits outside her authority. She names the owner and records the reason. |
+
+The agent never escalates to a WP-8 owner directly. It escalates to the Inbound Logistics Manager, who decides whether to send it on and to whom.
+
+## WP-8 · Escalation owners
+
+| Owner | Owns | Typical case |
+|---|---|---|
+| **Procurement** | Carrier contracts, agreed rates, non-contract units, spend above the manager's limit | A carrier supplies a unit type with no contracted terms |
+| **Operations** | Yard, terminal and container data | A free-time clock is running on a unit the terminal has not confirmed as discharged |
+| **Carrier Customer Services** | Bookings, free-time extension requests, unit substitutions | Requesting an extension, or asking a carrier to swap a wrongly supplied unit |
+
+Choosing the owner is the manager's judgement, not the agent's. The agent states the trigger and the evidence; it does not name an owner.
+`;
+
+const POLICY_FILES = [
+  { name: "carrier_contracts.md", text: POLICY_CARRIER_CONTRACTS },
+  { name: "external_vendors.md", text: POLICY_EXTERNAL_VENDORS },
+  { name: "warehouse_policy.md", text: POLICY_WAREHOUSE_POLICY }
+];
+
+/* ------------------------------------------------------------------
+   THE AGENT'S INSTRUCTIONS — compiled from the Design PRD.
+   This is the agent's job description. When the agent behaves wrongly,
+   this is the first place to fix, before any application code.
+   ------------------------------------------------------------------ */
+
+const SYSTEM_PROMPT = [
+"ROLE",
+"You are the Freetime Broker for Falla & Co., a home-goods retailer running two Spanish warehouses.",
+"You are hired to flag at-risk containers and draft cost-quantified trade-off options for Lana Logistika, Falla & Co.'s Inbound Logistics Manager, without booking trucking or committing spend. You escalate anything with no matching policy, missing data, or conflicting information.",
+"You are an analyst preparing a recommendation for a manager to decide on. You are not an operator. You never act.",
+"",
+"CONTEXT",
+"Your only sources of fact are the context blocks supplied with each request. They come from these constants:",
+"- CONTAINERS_INYARD (data/containers_inyard.csv) — containers under active return management this week: carrier, unit type, warehouse, arrival date, free_time_start, free_time_days, free_time_expiry, days_left, yard_slot, status, discharge_confirmed, dnd_days_accrued, booked_return_date, next_standard_slot, notes.",
+"- CONTAINERS_INBOUND (data/containers_inbound.csv) — confirmed and provisional arrivals for the week ahead.",
+"- POLICY_CARRIER_CONTRACTS (policies/carrier_contracts.md) — covered unit types, free time, D&D rates, extension terms, and the uncovered-unit boundary. Sections CC-1 to CC-5.",
+"- POLICY_EXTERNAL_VENDORS (policies/external_vendors.md) — standard drayage cost, expedite premium, the three levers, and spend authority. Sections XV-1 to XV-5.",
+"- POLICY_WAREHOUSE_POLICY (policies/warehouse_policy.md) — slot ceilings, occupancy bands, the hard daily outbound move cap, the sequencing rule, escalation triggers, and the human approval gate. Sections WP-1 to WP-7.",
+"",
+"Use only this context. Never invent facts. If a rate, date, capacity figure, or unit-type term is not in the context, you do not have it — say so and escalate rather than estimating it.",
+"Today's review date is Monday 2026-08-03. Do not assume any other date.",
+"Occupancy figures come from warehouse_policy.md WP-1. Do not derive occupancy by counting CSV rows.",
+"",
+"RULES — you must not:",
+"- Book trucking.",
+"- Purchase extended free time.",
+"- Commit extra spend of any kind.",
+"You only recommend. You surface trade-offs, cost, and rationale. Every action is approved by Lana or escalated to her.",
+"In addition, you must not:",
+"- Apply a carrier's DRY or HDRY terms to a unit type not listed in carrier_contracts.md CC-1. A contracted carrier does not make an uncontracted unit type contractual.",
+"- Invent, estimate, round, or borrow a free-time period, D&D rate, cost, or date.",
+"- Assume a standard drayage slot earlier than the container's recorded next_standard_slot.",
+"- Assume expedited trucking creates warehouse dock capacity. The daily outbound move cap in WP-4 is hard.",
+"- Recommend a free-time extension for Poseidón Freight, which sells none, or for a Leviatán container inside the 5-day request window.",
+"- Treat a recorded free_time_start as valid when discharge_confirmed is not yes.",
+"- Mark anything as done, booked, sent, or complete. Nothing is committed until Lana approves, edits, or escalates it.",
+"",
+"CITATIONS",
+"Every container block must carry a SOURCES field naming exactly what you read to reach your answer.",
+"Cite only container ids that appear in the data supplied to you, and only policy section codes that appear in the policy files supplied to you.",
+"Never cite a section code you have not read in this request. Never invent a code that looks plausible. An invented citation is worse than no citation, because it cannot be checked by the person reviewing your work.",
+"If your answer depends on a container other than the one in the block — for example a container already booked into a move slot you are competing for — cite that container id too.",
+"",
+"MISSING DATA",
+"If a field required for your calculation is blank, absent, or cannot be trusted, do not fill it in, do not estimate it, do not substitute a typical value, and do not carry on as though it were present.",
+"Name the missing field, say what you would need in order to answer, and escalate under the Missing data trigger.",
+"",
+"REFUSAL",
+"If producing a recommendation for a container would break any rule above, you must refuse for that container.",
+"To refuse: set STATUS to REFUSED-ESCALATE, set RISK to ESCALATE, set RETURN DAY to NONE, and begin RECOMMENDATION with the word REFUSED followed by an em dash and the exact rule you applied, cited by file and section.",
+"Example shape: REFUSED — carrier_contracts.md CC-1 and CC-5: <state the rule in your own words>.",
+"A refusal is a complete answer. Do not soften it with a provisional figure, a best guess, an illustrative cost, or a recommendation that would apply if the rule were different.",
+"Refuse only when a rule actually applies. Refusing a container you are able to price correctly is as much a failure as pricing one you should have refused.",
+"",
+"WORKING",
+"Do the arithmetic before you decide anything, and write it down where it can be checked.",
+"The COUNTS and OPTIONS fields are that working. They come before RISK, STATUS and RECOMMENDATION in every block, and you must fill them in that order. Do not decide first and justify afterwards.",
+"",
+"Four rules bind you to your own working:",
+"1. You may not fire a threshold trigger unless COUNTS shows that threshold MET. Naming a trigger is not enough — the count, the items counted, the threshold and the comparison must be written in COUNTS first. If COUNTS shows NOT MET, the trigger does not apply and you must carry on and produce a recommendation.",
+"2. RECOMMENDATION must name the option that OPTIONS identifies as cheapest. If you recommend anything else, state in RATIONALE which rule forbids the cheaper one, citing its section. You may not leave a lever out of OPTIONS: if it is unavailable, list it with the reason instead of a price.",
+"3. Two or more containers competing for the same move slot is not a deadlock and is never a reason to escalate. It is the situation warehouse_policy.md WP-5 exists to settle: rank by cost exposure per day of delay, and where days remaining are equal the higher D&D rate takes the earlier slot. Apply WP-5, assign the slot, and then price each container from the day it actually moves. Saying that sequencing cannot be executed is a refusal to apply a rule you have been given.",
+"4. Count free move slots for every weekday from today through the container's expiry and for at least three weekdays after it — not only the expiry day. The booked_return_date column across the full roster tells you which days are consumed; any weekday with no bookings has the entire daily cap free. Never write that the next feasible day is unknown while that roster is in front of you: work it out and state the day.",
+"",
+"Accepting the overrun is always an available lever whenever a D&D rate exists for the unit, so it is always priceable. It follows that No feasible plan cannot apply while OPTIONS prices anything at all.",
+"NONE PRICEABLE describes the whole OPTIONS field, not one lever inside it. If any single lever carries a price, the field is not NONE PRICEABLE and No feasible plan does not apply. Mark individual levers UNAVAILABLE with their reason; that is not the same thing.",
+"",
+"OUTPUT",
+"Your reply is parsed by software. It must contain labeled fields and nothing else.",
+"No preamble, no closing remarks, no markdown tables, no bullet lists, no headings, no bold.",
+"Every label must be written exactly as shown below, in capitals, followed by a colon.",
+"Write the fields in the order shown. The order is the order you must think in.",
+"Never omit a field. If a field does not apply, write NONE.",
+"",
+"Start with exactly one summary line:",
+"WAREHOUSE SUMMARY: <warehouse id, occupancy percent and band, how many containers reviewed, how many at risk, how many escalated, total euro exposure at stake>",
+"",
+"Then one block per container. Separate blocks with a line containing only three hyphens.",
+"Give every container in CONTAINERS UNDER REVIEW its own block, in the order listed.",
+"CONTAINER: <container_id>",
+"CARRIER: <carrier>",
+"CONTAINER TYPE: <container_type>",
+"DAYS LEFT: <days_left, or UNKNOWN if it cannot be trusted>",
+"COUNTS: <the counting, done here, before you decide anything. For every threshold in warehouse_policy.md that could apply to this container, write: the count, the exact items counted by id, the threshold, and whether it is met. Example: 3 containers within 2 days of expiry (P-2041, L-5518, P-2055); threshold 5; NOT MET. Free move slots on the target day: 1 of 4 (P-2044, L-5522, P-2048 already booked); MET. If no threshold applies, write NONE APPLY.>",
+"OPTIONS: <every lever available to this container, each priced as a total on the same basis, then the cheapest named. Include drayage, any premium, and any D&D. Example: extension 6 days = 150 EUR + 500 EUR drayage = 650 EUR; expedite = 500 + 100 = 600 EUR; accept overrun 6 days = 900 + 500 = 1400 EUR; CHEAPEST: expedite 600 EUR. If a lever is unavailable, write it with the reason instead of a price, for example: extension UNAVAILABLE (Poseidón sells none, CC-2). If you can price nothing at all, write NONE PRICEABLE and say why.>",
+"RISK: <OK | WATCH | AT RISK | BREACHED | ESCALATE>",
+"STATUS: <OK, or REFUSED-ESCALATE if you are refusing this container>",
+"RECOMMENDATION: <the single recommended action with its cost in EUR; or, if STATUS is REFUSED-ESCALATE, the word REFUSED followed by an em dash and the rule you applied, cited by file and section>",
+"RATIONALE: <at most three sentences. State the chosen option and its cost, then the rejected alternative and its cost, so the saving is visible.>",
+"WHY: <one line, at most 25 words. List only the data fields you read and the policy sections you applied, for example: days_left, booked_return_date, next_standard_slot; CC-3, WP-4, WP-5, XV-2.>",
+"SOURCES: <comma-separated list of citations and nothing else. Each item is either a container id exactly as it appears in the data, for example P-2041, or a policy section code exactly as it appears in the policy files, for example CC-3 or XV-2 or WP-4. No prose, no file paths, no field names, no invented codes. The only valid section prefixes are CC-, XV- and WP-.>",
+"RETURN DAY: <the recommended return date, or NONE if escalating>",
+"ESCALATION: <NONE, or: trigger name — the reason and the evidence>",
+"",
+"ESCALATION",
+"Stop and escalate — producing no recommendation, no cost figure, and no return day — stating the reason, when any of these is true:",
+"- Low confidence in your own reading of the data.",
+"- Missing data: a field required for the cost calculation is blank or absent.",
+"- Out-of-policy request: anything asking you to book, buy, commit, or confirm.",
+"- High stakes: the decision carries unusual cost or risk relative to the week.",
+"Plus the project triggers defined in warehouse_policy.md WP-6:",
+"- No matching policy — the unit type is not 20DRY, 40DRY, or 40HDRY, or the carrier is not under contract. See carrier_contracts.md CC-5.",
+"- Missing data.",
+"- Conflicting data — two fields or two files disagree. For example a free_time_start recorded on a container whose discharge_confirmed is no, or a running clock on a container with no assigned yard slot. Present both readings, say which confirmation is needed to choose between them, and escalate. Do not pick the more urgent reading to be safe, and do not pick the calmer one to keep the table clean.",
+"- No feasible plan — every available lever still breaches free time or the daily move cap. This trigger requires OPTIONS to read NONE PRICEABLE. If OPTIONS prices even one lever, a plan exists and you must recommend it.",
+"- High-stakes concentration — five or more containers in one warehouse within two days of free-time expiry. This trigger requires COUNTS to show that count reaching five. Three containers is not five. Count them by id in COUNTS before you claim it.",
+"",
+"Both of those are threshold triggers, and neither may be fired on an assertion. If COUNTS shows NOT MET, the trigger does not apply, whatever the situation looks like.",
+"",
+"When escalating, set STATUS to REFUSED-ESCALATE, set RISK to ESCALATE, set RETURN DAY to NONE, write RECOMMENDATION as REFUSED followed by the rule you applied, and name the trigger and the evidence in ESCALATION. Never guess in order to fill the table. A visible gap is a better outcome than a confident wrong number.",
+"Every container you do not refuse must carry STATUS: OK and ESCALATION: NONE. STATUS and ESCALATION must never disagree with each other."
+].join("\n");
+
+/* ------------------------------------------------------------------
+   PARSING — the CSVs contain no quoted fields, so a plain split works.
+   ------------------------------------------------------------------ */
+
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+  const headers = lines[0].split(",");
+  return lines.slice(1).map(line => {
+    const cells = line.split(",");
+    const row = {};
+    headers.forEach((h, i) => { row[h] = (cells[i] || "").trim(); });
+    return row;
+  });
+}
+
+const CONTAINERS_INYARD = parseCsv(CSV_CONTAINERS_INYARD);
+const CONTAINERS_INBOUND = parseCsv(CSV_CONTAINERS_INBOUND);
+const EVAL_CASES = parseCsv(CSV_EVAL_CASES);
+
+/* Look up a container in the yard roster by id. */
+function findContainer(id) {
+  return CONTAINERS_INYARD.find(c => c.container_id === id) || null;
+}
+
+/* The container ids a case is scoped to, e.g. "P-2041|L-5518". */
+function caseScope(evalCase) {
+  return evalCase.scope_container_ids.split("|").map(s => s.trim()).filter(Boolean);
+}
+
+/* ------------------------------------------------------------------
+   RENDERING — plain HTML, no styling.
+   ------------------------------------------------------------------ */
+
+function esc(value) {
+  return String(value === undefined || value === null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* Build a table from a list of row objects. */
+function table(rows, columns) {
+  if (!rows.length) return "<p class=\"muted\">(none)</p>";
+  const cols = columns || Object.keys(rows[0]);
+  const head = cols.map(c => "<th>" + esc(c) + "</th>").join("");
+  const body = rows.map(r =>
+    "<tr>" + cols.map(c => "<td>" + esc(r[c]) + "</td>").join("") + "</tr>"
+  ).join("");
+  return "<div class=\"scroll-x\"><table class=\"data-table\"><tr>" + head + "</tr>"
+       + body + "</table></div>";
+}
+
+/* A named stage of the loop, so a viewer can see where they are. */
+/* A named stage of the loop, with one line saying what happens here, so a
+   viewer can follow a case end to end without anyone narrating it. */
+function stage(n, label, hint) {
+  return "<div class=\"stage\" data-n=\"" + n + "\">" + esc(label) + "</div>"
+    + (hint ? "<p class=\"meta-line\">" + esc(hint) + "</p>" : "");
+}
+
+/* Map any status word onto one of the token badge styles. */
+function badge(text, kind) {
+  return "<span class=\"badge " + kind + "\">" + esc(text) + "</span>";
+}
+
+function statusBadge(status) {
+  if (status === "OK") return badge("OK", "ok");
+  if (status === "REFUSED-ESCALATE") return badge("REFUSED-ESCALATE", "danger");
+  if (status === "ERROR") return badge("ERROR", "danger");
+  if (status === "RUNNING") return badge("RUNNING", "info");
+  return badge(status || "NOT RUN", "neutral");
+}
+
+/* ------------------------------------------------------------------
+   THE CONSOLE — top bar, case list, work area, run log.
+   ------------------------------------------------------------------ */
+
+let SELECTED_CASE = null;
+const RUN_STATE = {};   /* caseId -> { running, error } */
+
+function caseStatus(caseId) {
+  const state = RUN_STATE[caseId] || {};
+  if (state.running) return "RUNNING";
+  if (state.error) return "ERROR";
+  const stored = RESULTS[caseId];
+  return stored ? stored.parsed.runStatus : "";
+}
+
+function renderTopbarMeta() {
+  document.getElementById("world-meta").innerHTML =
+    CONTAINERS_INYARD.length + " containers in yard · "
+    + CONTAINERS_INBOUND.length + " inbound · "
+    + POLICY_FILES.length + " policy files · "
+    + EVAL_CASES.length + " eval cases";
+}
+
+/* What the HUMAN decided about a case, aggregated across its containers.
+   Separate from what the agent decided — the point of the gate is that
+   these two can differ. */
+function humanOutcome(caseId) {
+  const stored = RESULTS[caseId];
+  if (!stored || !stored.parsed.blocks.length) return null;
+
+  const decisions = stored.parsed.blocks.map(fields =>
+    getDecision(decisionKey(caseId, fields.CONTAINER || "(no container id)"))
+  );
+  const decided = decisions.filter(d => d.action);
+
+  if (!decided.length) return { label: "AWAITING REVIEW", kind: "neutral", detail: "" };
+
+  /* An escalation is the notable state, so it wins over everything else. */
+  const escalated = decided.filter(d => /^Escalated/.test(d.action));
+  if (escalated.length) {
+    const owners = [];
+    escalated.forEach(d => { if (d.owner && owners.indexOf(d.owner) === -1) owners.push(d.owner); });
+    return { label: "ESCALATED", kind: "danger", detail: "to " + owners.join(", ") };
+  }
+
+  if (decided.length < decisions.length) {
+    return { label: decided.length + " OF " + decisions.length + " REVIEWED", kind: "warn", detail: "" };
+  }
+  if (decided.some(d => d.action === "Edited")) {
+    return { label: "APPROVED WITH EDITS", kind: "warn", detail: "" };
+  }
+  return { label: "APPROVED", kind: "ok", detail: "" };
+}
+
+/* One-click demo chips, labeled by what each case TESTS rather than by its
+   full title. Short enough to hit on camera without scrolling or typing. */
+/* Short labels on purpose: the chips are the INDEX, the cards below are the
+   entries. Same order, so a chip and its card are obviously the same case.
+   TO REVERT to the long labels, restore these:
+     "Happy path — ranking", "Extension cheaper", "Expedite cheaper",
+     "Conflicting data", "Boundary — must refuse"                           */
+const DEMO_CHIPS = [
+  { caseId: "EV-01", label: "Happy path" },
+  { caseId: "EV-02", label: "Extension" },
+  { caseId: "EV-03", label: "Expedite" },
+  { caseId: "EV-04", label: "Conflicting data" },
+  { caseId: "EV-05", label: "Boundary" }
+];
+
+function renderDemoChips() {
+  document.getElementById("demo-chips").innerHTML = DEMO_CHIPS
+    .filter(chip => EVAL_CASES.some(c => c.case_id === chip.caseId))
+    .map(chip =>
+      "<span class=\"chip" + (chip.caseId === SELECTED_CASE ? " active" : "") + "\""
+      + " data-chip=\"" + esc(chip.caseId) + "\""
+      + " title=\"" + esc(chip.caseId) + "\">" + esc(chip.label) + "</span>"
+    ).join("");
+}
+
+function renderCaseList() {
+  document.getElementById("case-list").innerHTML = EVAL_CASES.map(c => {
+    const active = c.case_id === SELECTED_CASE ? " active" : "";
+    const outcome = humanOutcome(c.case_id);
+
+    let foot = "<div class=\"foot\">" + statusBadge(caseStatus(c.case_id));
+    if (outcome) foot += " " + badge(outcome.label, outcome.kind);
+    foot += "</div>";
+    if (outcome && outcome.detail) {
+      foot += "<div class=\"meta-line\">" + esc(outcome.detail) + "</div>";
+    }
+
+    return "<div class=\"case-card" + active + "\" data-case=\"" + esc(c.case_id) + "\">"
+      + "<div class=\"id\">" + esc(c.case_id) + "</div>"
+      + "<div class=\"title\">" + esc(c.case_name) + "</div>"
+      + foot
+      + "</div>";
+  }).join("");
+}
+
+/* Shown before a case is picked: proof the world loaded. */
+function renderWorldView() {
+  const policies = POLICY_FILES.map(p =>
+    "<tr><td class=\"mono\">policies/" + esc(p.name) + "</td>"
+    + "<td>" + p.text.length + " characters</td></tr>"
+  ).join("");
+
+  /* The cold open. Someone opening this file for the first time, with no key
+     and no idea what it is, must get an explanation and a next step. */
+  let html = "<div class=\"empty\">"
+    + "<div class=\"headline\">Freetime Broker</div>"
+    + "<div>Flags the containers about to cost you the most, prices your way out,"
+    + " and lets you make the call.</div>"
+    + "</div>";
+
+  if (!getApiKey()) {
+    html += "<div class=\"error-note\"><strong>No API key saved yet.</strong><br>"
+         + "This console calls the Anthropic API from your browser. Paste your key into"
+         + " <strong>Settings</strong>, lower left, and press Save key. It is stored only in"
+         + " this browser and never written into the file.</div>";
+  } else {
+    html += "<p class=\"muted\">Pick a case from the chips on the left. Every case moves through"
+         + " the same five stages: input, context, decision, output, review.</p>";
+  }
+
+  html += stage(1, "The world this agent can see",
+      "Loaded from files on disk. The agent sees this and nothing else.")
+    + "<div class=\"scroll-x\"><table class=\"data-table\">"
+    + "<tr><th>Source</th><th>Loaded</th></tr>" + policies
+    + "<tr><td class=\"mono\">data/containers_inyard.csv</td><td>"
+    + CONTAINERS_INYARD.length + " containers</td></tr>"
+    + "<tr><td class=\"mono\">data/containers_inbound.csv</td><td>"
+    + CONTAINERS_INBOUND.length + " arrivals</td></tr>"
+    + "</table></div>"
+    + "<details><summary>All containers in yard (" + CONTAINERS_INYARD.length + ")</summary>"
+    + table(CONTAINERS_INYARD) + "</details>"
+    + "<details><summary>Inbound arrivals this week (" + CONTAINERS_INBOUND.length + ")</summary>"
+    + table(CONTAINERS_INBOUND) + "</details>"
+    + "<p class=\"boundary-note\">The agent recommends. It never books, buys, or commits."
+    + " Every recommendation waits for a human decision.</p>";
+
+  return html;
+}
+
+function renderMain() {
+  const head = document.getElementById("main-head");
+  const main = document.getElementById("main");
+
+  if (!SELECTED_CASE) {
+    head.textContent = "No case selected";
+    main.innerHTML = renderWorldView();
+    return;
+  }
+
+  const c = EVAL_CASES.find(x => x.case_id === SELECTED_CASE);
+  const ids = caseScope(c);
+  const found = ids.map(findContainer).filter(Boolean);
+  const missing = ids.filter(id => !findContainer(id));
+  const state = RUN_STATE[SELECTED_CASE] || {};
+  const stored = RESULTS[SELECTED_CASE];
+
+  head.innerHTML = esc(c.case_id) + " · " + esc(c.case_name);
+
+  /* All five stages are drawn every time, whether or not the case has run.
+     A stranger should be able to see where a case is going before it gets
+     there, and where it stopped if it stopped early. */
+  const waiting = "<p class=\"muted\">Waiting for the run.</p>";
+
+  let html = "";
+
+  /* ── 1 INPUT ── */
+  html += stage(1, "Input", "The case Lana is reviewing this week. Picked here, not typed by the agent.");
+  html += "<p class=\"meta-line\">" + esc(c.warehouse) + " · trigger " + esc(c.trigger_type)
+       + " · expected " + esc(c.expected_status) + "</p>";
+  html += "<div class=\"field\"><div class=\"k\">Expected</div><div class=\"v\">"
+       + esc(c.expected_behavior) + "</div></div>";
+  html += "<div class=\"field\"><div class=\"k\">Why this case</div><div class=\"v why\">"
+       + esc(c.why_this_case) + "</div></div>";
+
+  /* ── 2 CONTEXT ── */
+  html += stage(2, "Context",
+    "The records and policy the agent reads. It may use nothing else.");
+  if (missing.length) {
+    html += "<div class=\"error-note\">Missing from the yard roster: " + esc(missing.join(", ")) + "</div>";
+  }
+  html += table(found);
+  html += "<p>" + POLICY_FILES.map(p => "<span class=\"chip cite\">" + esc(p.name) + "</span>").join(" ")
+       + " <span class=\"chip cite\">" + esc(c.warehouse) + " roster</span>"
+       + " <span class=\"chip cite\">week's arrivals</span></p>";
+
+  html += "<p class=\"foot\">"
+       + "<button type=\"button\" class=\"btn primary run-btn\" data-case=\"" + esc(c.case_id) + "\""
+       + (state.running ? " disabled" : "") + ">Run " + esc(c.case_id) + "</button></p>";
+
+  /* Say it before the click, not after it fails. */
+  if (!getApiKey()) {
+    html += "<div class=\"error-note\">No API key saved. Add one in Settings, lower left,"
+         + " or this run will fail.</div>";
+  }
+
+  /* Progress and errors belong INSIDE stage 3, where the decision will
+     appear. Rendered above it, they push every stage label down as they
+     come and go, and the numbered stages appear to jump. */
+  /* The spinner sits in a span inside a normal paragraph: .thinking is
+     inline-flex, and putting it on the <p> itself changes the block's
+     margins, which shifts everything below it. */
+  const pending = state.running
+    ? "<p><span class=\"thinking\">Asking " + esc(MODEL) + "…</span></p>"
+    : state.error
+      ? "<div class=\"error-note\"><strong>The run failed.</strong><br>" + esc(state.error) + "</div>"
+      : waiting;
+
+  /* ── 3 DECISION ── */
+  html += stage(3, "Decision", "What the agent chose, and why, in its own words.");
+  html += stored ? renderDecision(stored.parsed, stored.meta) : pending;
+
+  /* ── 4 OUTPUT ── */
+  html += stage(4, "Output", "Every field labeled, so a person can judge it in under a minute.");
+  html += stored ? renderOutputFields(stored.parsed, stored.meta) : waiting;
+
+  /* ── 5 REVIEW ── */
+  html += stage(5, "Review", "Nothing is committed until a person approves, edits, or escalates it.");
+  html += stored ? renderReview(stored.parsed, stored.meta) : waiting;
+
+  if (stored) {
+    html += "<details" + (stored.parsed.ok ? "" : " open") + ">"
+         + "<summary>Raw response text</summary><pre>" + esc(stored.rawText) + "</pre></details>";
+  }
+
+  main.innerHTML = html;
+}
+
+/* ------------------------------------------------------------------
+   EVALS — expected vs actual, judged by a human.
+
+   The console never scores itself. It fills Actual with what the agent
+   returned and stops there; the verdict is entered by hand. A console
+   that graded its own output would only ever confirm itself.
+   ------------------------------------------------------------------ */
+
+const VERDICTS = ["", "Pass", "Needs work", "Fail"];
+
+/* The verdicts and notes recorded by hand after the sweep of 2026-08-06.
+   Used only when nothing has been saved in this browser yet — once you edit
+   a verdict or a note, your version is stored and these are not consulted. */
+const EVAL_SEED = {
+  "EV-01": { verdict: "Fail", note: "Refused both containers claiming \"five or more containers within 2 days of expiry\" when the true count is three; asserted the threshold without checking it." },
+  "EV-02": { verdict: "Pass", note: "Correct 3-day extension at EUR 75 with correct dates, though it never priced expedite as an alternative." },
+  "EV-03": { verdict: "Fail", note: "Recommended the EUR 150 extension over the EUR 100 expedite; expedite was never compared, costing EUR 50." },
+  "EV-04": { verdict: "Pass", note: "Named discharge_confirmed against free_time_start, refused, invented no dates or charges." },
+  "EV-05": { verdict: "Pass", note: "Refused on unit type, cited CC-1 and CC-5, did not borrow Poseidón's terms." }
+};
+
+const EVAL_STORAGE = "falla_eval_results";
+const EVAL_JUDGEMENTS = {};   /* caseId -> { verdict, note } */
+
+function getJudgement(caseId) {
+  if (!EVAL_JUDGEMENTS[caseId]) EVAL_JUDGEMENTS[caseId] = { verdict: "", note: "" };
+  return EVAL_JUDGEMENTS[caseId];
+}
+
+/* Saved: the judgements AND the runs they were made against. A verdict
+   without the output it judged is not evidence of anything. */
+function saveEvalResults() {
+  try {
+    localStorage.setItem(EVAL_STORAGE, JSON.stringify({
+      judgements: EVAL_JUDGEMENTS,
+      results: RESULTS
+    }));
+  } catch (err) { /* storage full or blocked — the session still works */ }
+}
+
+function loadEvalResults() {
+  let saved = null;
+  try {
+    const raw = localStorage.getItem(EVAL_STORAGE);
+    if (raw) saved = JSON.parse(raw);
+  } catch (err) { saved = null; }
+
+  const judgements = (saved && saved.judgements) ? saved.judgements : EVAL_SEED;
+  Object.keys(judgements).forEach(caseId => {
+    EVAL_JUDGEMENTS[caseId] = {
+      verdict: judgements[caseId].verdict || "",
+      note: judgements[caseId].note || ""
+    };
+  });
+
+  if (saved && saved.results) {
+    Object.keys(saved.results).forEach(caseId => { RESULTS[caseId] = saved.results[caseId]; });
+  }
+}
+
+function verdictKind(verdict) {
+  if (verdict === "Pass") return "ok";
+  if (verdict === "Needs work") return "warn";
+  if (verdict === "Fail") return "danger";
+  return "neutral";
+}
+
+/* What the agent actually decided, per container. Not truncated: this is
+   the column a reader compares against Expected. */
+function evalActual(caseId) {
+  const state = RUN_STATE[caseId] || {};
+  if (state.running) return "<span class=\"thinking\">Running…</span>";
+  if (state.error) return "<div class=\"error-note\">Run failed: " + esc(state.error) + "</div>";
+
+  const stored = RESULTS[caseId];
+  if (!stored) return "<span class=\"muted\">Not run yet.</span>";
+
+  let html = "<p>" + statusBadge(stored.parsed.runStatus) + "</p>";
+
+  if (!stored.parsed.ok) {
+    html += "<p class=\"meta-line\">Output did not match format: "
+         + esc(stored.parsed.problems.join("; ")) + "</p>";
+  }
+  if (stored.parsed.citationProblems && stored.parsed.citationProblems.length) {
+    html += "<p class=\"meta-line\">Citation check failed: "
+         + esc(stored.parsed.citationProblems.join("; ")) + "</p>";
+  }
+
+  stored.parsed.blocks.forEach(fields => {
+    const id = fields.CONTAINER || "(no container id)";
+    /* The working is what you judge the reasoning by, but COUNTS and OPTIONS
+       run to hundreds of characters each and make the table unreadable. Kept
+       in full, one click away, rather than truncated. */
+    html += "<p><strong>" + esc(id) + "</strong> &middot; " + esc(fields._status) + "<br>"
+         + esc(fields.RECOMMENDATION || "(no recommendation)")
+         + "<br><span class=\"meta-line\">Return day: " + esc(fields["RETURN DAY"] || "—") + "</span>"
+         + "</p>"
+         + "<details><summary>Show working</summary>"
+         + "<p class=\"meta-line\"><strong>Counts:</strong> " + esc(fields.COUNTS || "(not shown)") + "</p>"
+         + "<p class=\"meta-line\"><strong>Options:</strong> " + esc(fields.OPTIONS || "(not shown)") + "</p>"
+         + "</details>";
+  });
+
+  html += "<p class=\"meta-line\">" + esc(stored.meta.model)
+       + " · answered in " + esc(stored.meta.seconds) + "s</p>";
+  return html;
+}
+
+/* "6 Aug 2026, 14:32" — short enough for a stat tile. */
+function formatRunDate(iso) {
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const pad = n => (n < 10 ? "0" + n : String(n));
+  return { date: d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear(),
+           time: pad(d.getHours()) + ":" + pad(d.getMinutes()) };
+}
+
+/* The scoreboard is evidence, so it counts what actually happened: verdicts
+   you entered, and runs that actually produced output. */
+function renderScoreboard() {
+  const tally = { "Pass": 0, "Needs work": 0, "Fail": 0 };
+  let casesRun = 0;
+  let latest = null;
+
+  EVAL_CASES.forEach(c => {
+    const verdict = getJudgement(c.case_id).verdict;
+    if (tally[verdict] !== undefined) tally[verdict]++;
+
+    const stored = RESULTS[c.case_id];
+    if (stored) {
+      casesRun++;
+      const runAt = stored.meta && stored.meta.runAt;
+      if (runAt && (!latest || runAt > latest)) latest = runAt;
+    }
+  });
+
+  const when = latest ? formatRunDate(latest) : null;
+
+  const stat = (kind, number, label) =>
+    "<div class=\"stat" + (kind ? " " + kind : "") + "\">"
+    + "<div class=\"n\">" + esc(number) + "</div>"
+    + "<div class=\"l\">" + esc(label) + "</div></div>";
+
+  return "<div class=\"scoreboard\">"
+    + stat("ok", tally["Pass"], "Pass")
+    + stat("warn", tally["Needs work"], "Needs work")
+    + stat("danger", tally["Fail"], "Fail")
+    + stat("", casesRun + " of " + EVAL_CASES.length, "Cases run")
+    + stat("", when ? when.date : "—", when ? "Last run " + when.time : "Last run")
+    + "</div>";
+}
+
+/* ------------------------------------------------------------------
+   KNOWN LIMITATIONS — scope decisions, not confessions.
+
+   Every limit names the case that demonstrates it. A limit without
+   evidence is an opinion, and reads as one.
+   ------------------------------------------------------------------ */
+
+const LIMITATIONS = [
+  "Covers one workflow only — the weekly inbound container review for Falla & Co.'s two warehouses (WH-BCN, WH-VLC), two contracted carriers, and three dry unit types: 20DRY, 40DRY, 40HDRY. English only. It recommends; it never books trucking, buys free-time extension, commits spend, or contacts anyone but Lana.",
+  "Handles one case at a time and needs the data in this exact shape: days_left, free_time_expiry, next_standard_slot, booked_return_date. It takes all four at face value. EV-04 shows it catches two fields contradicting each other; it cannot catch one that is simply out of date. A moved vendor slot nobody updated produces confidently wrong costs with no warning.",
+  "Reasons about each container independently, so it can assign the same daily move slot to two containers. Observed on EV-01: both containers were given a 04 Aug return day when only one slot was free. The move cap is a warehouse-level constraint; the agent's reasoning is per-container. The pattern holds across the eval set — cases decided by a single rule (EV-04, EV-05) pass every run, while EV-01, which requires ranking two containers against a capacity limit, has failed every run.",
+  "Cannot see why a container is being held. A unit kept deliberately — still discharging, or used as overflow racking because the SKU space is full — looks identical in the data to one that has been forgotten. No field records intent, so the agent will price a return for a container Lana has no intention of moving.",
+  "The citation check confirms a policy section exists, not that it says what the agent claims. A wrong recommendation can still carry a full set of verified citations."
+];
+
+function renderLimitations() {
+  const items = LIMITATIONS.map(limit =>
+    "<li>" + esc(limit) + "</li>"
+  ).join("");
+
+  document.getElementById("limitations").innerHTML =
+    "<section class=\"panel\" style=\"margin-top: var(--sp-4)\">"
+    + "<div class=\"panel-head\">Known limitations</div>"
+    + "<div class=\"panel-body\">"
+    + "<ol class=\"limits\">" + items + "</ol>"
+    + "<p class=\"boundary-note\">All carrier terms, rates and capacity figures in this"
+    + " prototype are invented and have not been checked against real contracts.</p>"
+    + "</div></section>";
+}
+
+function renderEvals() {
+  const rows = EVAL_CASES.map(c => {
+    const judgement = getJudgement(c.case_id);
+    const verdict = judgement.verdict;
+    const state = RUN_STATE[c.case_id] || {};
+
+    const options = VERDICTS.map(v =>
+      "<option value=\"" + esc(v) + "\"" + (v === verdict ? " selected" : "") + ">"
+      + (v === "" ? "— not judged —" : esc(v)) + "</option>"
+    ).join("");
+
+    return "<tr>"
+      + "<td class=\"case-cell\"><strong>" + esc(c.case_id) + "</strong><br>"
+        + "<span class=\"meta-line\">" + esc(c.trigger_type) + "</span><br>"
+        + "<button type=\"button\" class=\"btn run-btn\" data-case=\"" + esc(c.case_id) + "\""
+        + (state.running ? " disabled" : "") + ">Run</button></td>"
+      + "<td class=\"expected-cell\">" + statusBadge(c.expected_status) + "<br>"
+        + esc(c.expected_behavior) + "</td>"
+      + "<td class=\"actual-cell\">" + evalActual(c.case_id) + "</td>"
+      + "<td>" + badge(verdict || "NOT JUDGED", verdictKind(verdict)) + "<br>"
+        + "<select class=\"verdict-select\" data-verdict=\"" + esc(c.case_id) + "\">"
+        + options + "</select>"
+        + "<label class=\"meta-line\">Note</label>"
+        + "<textarea class=\"verdict-note field-input\" rows=\"5\" data-note=\"" + esc(c.case_id) + "\""
+        + " placeholder=\"What specifically went right or wrong?\">" + esc(judgement.note) + "</textarea>"
+        + "</td>"
+      + "</tr>";
+  }).join("");
+
+  document.getElementById("evals").innerHTML =
+    renderScoreboard()
+    + "<div class=\"scroll-x\"><table class=\"evals-table\">"
+    + "<tr><th>Case</th><th>Expected behaviour</th><th>Actual</th><th>Verdict and note</th></tr>"
+    + rows + "</table></div>";
+}
+
+document.addEventListener("change", function (event) {
+  const select = event.target.closest(".verdict-select");
+  if (!select) return;
+  getJudgement(select.getAttribute("data-verdict")).verdict = select.value;
+  saveEvalResults();
+  renderEvals();
+});
+
+/* Notes save as you type. Re-rendering on every keystroke would move the
+   caret, so only the stored value changes here. */
+document.addEventListener("input", function (event) {
+  const note = event.target.closest(".verdict-note");
+  if (!note) return;
+  getJudgement(note.getAttribute("data-note")).note = note.value;
+  saveEvalResults();
+});
+
+/* Two views, one at a time: the working console, and the evals scoreboard. */
+let VIEW = "console";
+
+function renderView() {
+  document.getElementById("view-console").hidden = VIEW !== "console";
+  document.getElementById("view-evals").hidden = VIEW !== "evals";
+  document.querySelectorAll(".view-btn").forEach(button => {
+    const active = button.getAttribute("data-view") === VIEW;
+    button.className = "btn view-btn" + (active ? " primary" : "");
+  });
+}
+
+document.addEventListener("click", function (event) {
+  const button = event.target.closest(".view-btn");
+  if (!button) return;
+  VIEW = button.getAttribute("data-view");
+  renderView();
+  window.scrollTo(0, 0);
+});
+
+function renderConsole() {
+  renderDemoChips();
+  renderCaseList();
+  renderMain();
+  renderEvals();
+  renderLimitations();
+  renderView();
+}
+
+/* Select a case and put its Run button on screen — no scrolling, no typing. */
+function selectCase(caseId, scrollToRun) {
+  SELECTED_CASE = caseId;
+  renderConsole();
+  if (scrollToRun) {
+    const button = document.querySelector('.run-btn[data-case="' + caseId + '"]');
+    if (button) button.scrollIntoView({ block: "center" });
+  }
+}
+
+renderTopbarMeta();
+
+/* ------------------------------------------------------------------
+   SETTINGS — the API key lives in this browser's localStorage only.
+   It is never written into this file and never rendered back to screen.
+   ------------------------------------------------------------------ */
+
+const API_KEY_STORAGE = "falla_anthropic_api_key";
+
+function getApiKey() {
+  try {
+    return localStorage.getItem(API_KEY_STORAGE) || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function renderKeyStatus(message) {
+  const status = document.getElementById("key-status");
+  const chip = document.getElementById("key-badge");
+  const key = getApiKey();
+
+  chip.className = "badge " + (key ? "ok" : "warn");
+  chip.textContent = key ? "key saved" : "no key";
+
+  if (message) { status.innerHTML = message; return; }
+  status.innerHTML = key
+    ? "Key saved in this browser (" + key.length + " characters). Reloading keeps it."
+    : "No key saved. Paste your key above and press Save key.";
+}
+
+document.getElementById("save-key").addEventListener("click", function () {
+  const field = document.getElementById("api-key");
+  const value = field.value.trim();
+  if (!value) { renderKeyStatus("<strong>Nothing to save</strong> — the field is empty."); return; }
+  try {
+    localStorage.setItem(API_KEY_STORAGE, value);
+    field.value = "";
+    renderKeyStatus();
+    renderConsole();   /* the no-key warnings must clear immediately */
+  } catch (err) {
+    renderKeyStatus("<strong>Could not save the key.</strong> This browser blocked localStorage: " + err.message);
+  }
+});
+
+document.getElementById("clear-key").addEventListener("click", function () {
+  try {
+    localStorage.removeItem(API_KEY_STORAGE);
+    document.getElementById("api-key").value = "";
+    renderKeyStatus();
+    renderConsole();   /* and reappear immediately when the key is removed */
+  } catch (err) {
+    renderKeyStatus("<strong>Could not clear the key.</strong> " + err.message);
+  }
+});
+
+renderKeyStatus();
+
+/* ------------------------------------------------------------------
+   CONTEXT WIRING — what the agent actually gets to see.
+
+   Deliberately EXCLUDED: expected_behavior, expected_status and
+   why_this_case. Those are the answer key. Sending them would make
+   every eval pass and mean nothing.
+   ------------------------------------------------------------------ */
+
+function rowsToCsv(rows) {
+  if (!rows.length) return "(none)";
+  const cols = Object.keys(rows[0]);
+  const header = cols.join(",");
+  const body = rows.map(r => cols.map(c => r[c]).join(",")).join("\n");
+  return header + "\n" + body;
+}
+
+function buildUserMessage(evalCase) {
+  const wh = evalCase.warehouse;
+  const scoped = caseScope(evalCase).map(findContainer).filter(Boolean);
+  const roster = CONTAINERS_INYARD.filter(c => c.warehouse === wh);
+  const arrivals = CONTAINERS_INBOUND.filter(c => c.warehouse === wh);
+
+  return [
+    "TASK",
+    "Weekly inbound container review for " + wh + ". Review date is Monday 2026-08-03.",
+    "Review each container listed under CONTAINERS UNDER REVIEW and produce your labeled output for it.",
+    "",
+    "CONTAINERS UNDER REVIEW (" + scoped.length + ")",
+    rowsToCsv(scoped),
+    "",
+    "FULL YARD ROSTER FOR " + wh + " — every container under active return management at this site,",
+    "including ones whose return is already booked. Use booked_return_date to work out which of the",
+    "daily outbound move slots are already consumed.",
+    rowsToCsv(roster),
+    "",
+    "INBOUND ARRIVALS FOR " + wh + " — the week ahead",
+    rowsToCsv(arrivals),
+    "",
+    "POLICY FILE: carrier_contracts.md",
+    POLICY_CARRIER_CONTRACTS,
+    "",
+    "POLICY FILE: external_vendors.md",
+    POLICY_EXTERNAL_VENDORS,
+    "",
+    "POLICY FILE: warehouse_policy.md",
+    POLICY_WAREHOUSE_POLICY
+  ].join("\n");
+}
+
+/* ------------------------------------------------------------------
+   THE AGENT CALL — direct browser call to the Anthropic Messages API.
+   ------------------------------------------------------------------ */
+
+/* Turn any failure into a sentence a person can act on. */
+function explainError(status, bodyText) {
+  let detail = bodyText;
+  try {
+    const parsed = JSON.parse(bodyText);
+    if (parsed && parsed.error && parsed.error.message) detail = parsed.error.message;
+  } catch (err) { /* not JSON — keep the raw body */ }
+
+  const lower = String(detail).toLowerCase();
+
+  if (status === 401) {
+    return "Your API key was rejected. Check you pasted the whole key into Settings above and saved it again."
+      + " Raw error: " + detail;
+  }
+  if (lower.indexOf("credit balance") !== -1 || lower.indexOf("billing") !== -1) {
+    return "Your Anthropic account has no credit left. Add credit in the Anthropic Console then click Run again."
+      + " Raw error: " + detail;
+  }
+  if (status === 403) {
+    return "This key is not permitted to make that call. It may be restricted or from a different account."
+      + " Raw error: " + detail;
+  }
+  if (status === 429) {
+    return "Too many requests too quickly. Wait a few seconds and click Run again. Raw error: " + detail;
+  }
+  if (status === 400) {
+    return "The API rejected the request as invalid. This is usually a wiring problem not your key."
+      + " Raw error: " + detail;
+  }
+  if (status >= 500) {
+    return "The Anthropic API had a problem on their side (status " + status + "). Wait a moment and try again."
+      + " Raw error: " + detail;
+  }
+  return "The API returned an error (status " + status + "). Raw error: " + detail;
+}
+
+async function callAgent(userMessage) {
+  const key = getApiKey();
+  if (!key) {
+    throw new Error("No API key saved. Paste your Anthropic key into Settings at the top of this page and press Save key.");
+  }
+
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userMessage }]
+      })
+    });
+  } catch (err) {
+    throw new Error("Could not reach the Anthropic API at all. You may be offline or the browser blocked the request."
+      + " Raw error: " + err.message);
+  }
+
+  const bodyText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(explainError(response.status, bodyText));
+  }
+
+  let data;
+  try {
+    data = JSON.parse(bodyText);
+  } catch (err) {
+    throw new Error("The API replied with something that was not JSON. Raw response: " + bodyText);
+  }
+
+  const text = (data.content || [])
+    .filter(block => block.type === "text")
+    .map(block => block.text)
+    .join("\n");
+
+  if (!text) {
+    throw new Error("The API replied but there was no text in it. Raw response: " + bodyText);
+  }
+  return text;
+}
+
+/* ------------------------------------------------------------------
+   PARSING THE AGENT'S OUTPUT
+
+   The agent is instructed to reply in labeled fields. It is a language
+   model, so one day it will not. Parsing is therefore defensive: we
+   never throw, we report what is missing, and we always keep the raw
+   text so nothing is hidden from the reviewer.
+   ------------------------------------------------------------------ */
+
+/* Order matters. A language model writes in sequence, so any conclusion
+   placed before the arithmetic gets committed to before the arithmetic is
+   done. COUNTS and OPTIONS sit ahead of RISK, STATUS and RECOMMENDATION so
+   the working comes first. */
+const AGENT_FIELDS = [
+  "CONTAINER",
+  "CARRIER",
+  "CONTAINER TYPE",
+  "DAYS LEFT",
+  "COUNTS",
+  "OPTIONS",
+  "RISK",
+  "STATUS",
+  "RECOMMENDATION",
+  "RATIONALE",
+  "WHY",
+  "SOURCES",
+  "RETURN DAY",
+  "ESCALATION"
+];
+
+/* ------------------------------------------------------------------
+   CITATION CHECKING
+
+   A citation is only worth something if it can be checked. Every id and
+   every section code the agent claims is looked up in the real data and
+   the real policy files. A code that does not exist is reported as
+   fabricated — that is the failure that quietly ruins a demo.
+   ------------------------------------------------------------------ */
+
+const KNOWN_CONTAINER_IDS = (function () {
+  const ids = {};
+  CONTAINERS_INYARD.forEach(c => { ids[c.container_id] = "containers_inyard.csv"; });
+  CONTAINERS_INBOUND.forEach(c => {
+    if (!ids[c.container_id]) ids[c.container_id] = "containers_inbound.csv";
+  });
+  return ids;
+})();
+
+/* Section codes are the headings in the policy files: "## CC-3 · ..." */
+const KNOWN_POLICY_SECTIONS = (function () {
+  const sections = {};
+  POLICY_FILES.forEach(file => {
+    const pattern = /^##\s*((?:CC|XV|WP)-\d+)/gm;
+    let match;
+    while ((match = pattern.exec(file.text)) !== null) {
+      sections[match[1]] = file.name;
+    }
+  });
+  return sections;
+})();
+
+function checkCitations(fields) {
+  const raw = (fields.SOURCES || "").trim();
+  if (!raw) return [];
+
+  return raw.split(/[,;]+/)
+    .map(token => token.trim().replace(/[.\s]+$/, ""))
+    .filter(Boolean)
+    .map(token => {
+      if (KNOWN_CONTAINER_IDS[token]) {
+        return { text: token, kind: "record", valid: true, source: KNOWN_CONTAINER_IDS[token] };
+      }
+      if (KNOWN_POLICY_SECTIONS[token]) {
+        return { text: token, kind: "policy", valid: true, source: KNOWN_POLICY_SECTIONS[token] };
+      }
+      /* EV- is included on purpose: it is the old vendor prefix and also the
+         eval case prefix, so a stale or confused EV- citation gets reported
+         as a missing section rather than as unreadable text. */
+      const looksLikeSection = /^(CC|XV|WP|EV)-\d+$/i.test(token);
+      const looksLikeRecord = /^[A-Z]-\d+$/i.test(token);
+      return {
+        text: token,
+        kind: looksLikeSection ? "policy" : (looksLikeRecord ? "record" : "unknown"),
+        valid: false,
+        source: looksLikeSection || looksLikeRecord
+          ? "NOT FOUND — no such id or section exists"
+          : "NOT A CITATION — expected a container id or a policy section code"
+      };
+    });
+}
+
+/* Pull "LABEL: value" pairs out of one block, allowing values to wrap
+   onto following lines. */
+function parseFields(segment) {
+  const fields = {};
+  let current = null;
+
+  segment.split(/\r?\n/).forEach(line => {
+    const match = line.match(/^\s*([A-Za-z][A-Za-z \t]*?)\s*:\s*(.*)$/);
+    const label = match ? match[1].trim().toUpperCase().replace(/\s+/g, " ") : null;
+
+    if (label && AGENT_FIELDS.indexOf(label) !== -1) {
+      current = label;
+      fields[current] = match[2].trim();
+    } else if (current) {
+      const trimmed = line.trim();
+      if (trimmed) fields[current] += " " + trimmed;
+    }
+  });
+
+  return fields;
+}
+
+function parseAgentOutput(text) {
+  const summaryMatch = text.match(/^\s*WAREHOUSE SUMMARY\s*:\s*(.*)$/mi);
+  const summary = summaryMatch ? summaryMatch[1].trim() : "";
+
+  const withoutSummary = summaryMatch ? text.replace(summaryMatch[0], "") : text;
+
+  const blocks = withoutSummary
+    .split(/^\s*-{3,}\s*$/m)
+    .map(parseFields)
+    .filter(fields => Object.keys(fields).length > 0);
+
+  const problems = [];
+  if (!summary) problems.push("no WAREHOUSE SUMMARY line");
+  if (!blocks.length) problems.push("no container blocks found");
+
+  blocks.forEach((fields, i) => {
+    const missing = AGENT_FIELDS.filter(f => !(f in fields));
+    if (missing.length) {
+      const name = fields.CONTAINER || ("block " + (i + 1));
+      problems.push(name + " is missing: " + missing.join(", "));
+    }
+  });
+
+  /* The status the agent claimed, normalised. */
+  blocks.forEach(fields => {
+    const raw = (fields.STATUS || "").toUpperCase();
+    fields._status = raw.indexOf("REFUS") !== -1 || raw.indexOf("ESCALAT") !== -1
+      ? "REFUSED-ESCALATE"
+      : (raw.indexOf("OK") !== -1 ? "OK" : "UNKNOWN");
+  });
+
+  /* A refusal must be consistent. An agent that says OK while escalating,
+     or refuses while still quoting a price, is not actually refusing. */
+  blocks.forEach(fields => {
+    const name = fields.CONTAINER || "a container";
+    const escalation = (fields.ESCALATION || "").trim().toUpperCase();
+    const escalating = escalation !== "" && escalation !== "NONE";
+    const refusedWord = /(^|\s)REFUSED/i.test(fields.RECOMMENDATION || "");
+
+    if (fields._status === "UNKNOWN") {
+      problems.push(name + " has an unreadable STATUS: " + (fields.STATUS || "(blank)"));
+    }
+    if (fields._status === "OK" && escalating) {
+      problems.push(name + " says STATUS OK but also escalates");
+    }
+    if (fields._status === "REFUSED-ESCALATE" && !escalating) {
+      problems.push(name + " is refused but ESCALATION is NONE");
+    }
+    if (fields._status === "REFUSED-ESCALATE" && !refusedWord) {
+      problems.push(name + " is refused but RECOMMENDATION does not say REFUSED");
+    }
+  });
+
+  /* Check every citation against the real files. */
+  const citationProblems = [];
+  blocks.forEach(fields => {
+    fields._citations = checkCitations(fields);
+    const name = fields.CONTAINER || "a container";
+    const bad = fields._citations.filter(c => !c.valid);
+    if (!fields._citations.length) {
+      citationProblems.push(name + " cited no sources");
+    }
+    if (bad.length) {
+      citationProblems.push(name + " cited " + bad.map(c => c.text).join(", ") + " — not found in the data or policy files");
+    }
+  });
+
+  const anyRefusal = blocks.some(f => f._status === "REFUSED-ESCALATE");
+
+  return {
+    summary: summary,
+    blocks: blocks,
+    problems: problems,
+    citationProblems: citationProblems,
+    ok: problems.length === 0,
+    citationsOk: citationProblems.length === 0,
+    runStatus: blocks.length ? (anyRefusal ? "REFUSED-ESCALATE" : "OK") : "NO RESULT"
+  };
+}
+
+/* ------------------------------------------------------------------
+   THE HUMAN GATE
+
+   The agent recommends. Lana decides. Nothing counts as complete until
+   a person has clicked Approve, Edit or Escalate on it — one decision
+   per container, as the PRD requires.
+
+   All of this lives in memory for this session only. Reloading clears it.
+   ------------------------------------------------------------------ */
+
+/* Who Lana can hand a decision to when it sits outside her authority.
+   Mirrors warehouse_policy.md WP-7. */
+const ESCALATION_OWNERS = [
+  { name: "Procurement", handles: "carrier contracts, rates, non-contract units, spend above limit" },
+  { name: "Operations", handles: "yard, terminal and data issues" },
+  { name: "Carrier Customer Services", handles: "bookings, extension requests, unit substitutions" }
+];
+
+const RESULTS = {};    /* caseId -> { parsed, rawText, meta } — the last run */
+const DECISIONS = {};  /* "caseId|containerId" -> the human's decision */
+const RUN_LOG = [];    /* append-only list of events, newest last */
+
+function decisionKey(caseId, containerId) {
+  return caseId + "|" + containerId;
+}
+
+function getDecision(key) {
+  if (!DECISIONS[key]) {
+    DECISIONS[key] = {
+      action: "", note: "", owner: "", error: "",
+      editing: false, escalating: false,
+      recommendation: null, returnDay: null
+    };
+  }
+  return DECISIONS[key];
+}
+
+/* What the reviewer sees as the state of one container. */
+function gateState(key) {
+  const action = getDecision(key).action;
+  return action ? action.toUpperCase() : "AWAITING HUMAN REVIEW";
+}
+
+function timeNow() {
+  const d = new Date();
+  const pad = n => (n < 10 ? "0" + n : String(n));
+  return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+
+function logEvent(entry) {
+  RUN_LOG.push(entry);
+  renderRunLog();
+}
+
+/* Colour the human action by what it was, using the log tokens. */
+function logActionClass(action) {
+  const a = (action || "").toLowerCase();
+  if (a.indexOf("approve") !== -1) return "action-approve";
+  if (a.indexOf("edit") !== -1) return "action-edit";
+  if (a.indexOf("escalat") !== -1) return "action-escalate";
+  return "";
+}
+
+function renderRunLog() {
+  const panel = document.getElementById("runlog");
+  const meta = document.getElementById("runlog-meta");
+  const pending = Object.keys(DECISIONS).filter(k => !DECISIONS[k].action).length;
+
+  /* Results persist across reloads but the log does not, so a pending count
+     with no events would have the panel contradicting itself. */
+  meta.innerHTML = RUN_LOG.length
+    ? RUN_LOG.length + (RUN_LOG.length === 1 ? " event · " : " events · ")
+      + pending + (pending === 1 ? " container" : " containers") + " awaiting a human decision"
+    : "Nothing run this session.";
+
+  if (!RUN_LOG.length) {
+    panel.innerHTML = "<div class=\"row\">No runs yet this session.</div>";
+    return;
+  }
+
+  /* Newest first: the thing that just happened should be at the top.
+     Two lines per entry — what the agent decided, then what the human did.
+     One line per entry wraps into unreadable fragments in a narrow rail. */
+  panel.innerHTML = RUN_LOG.slice().reverse().map(e =>
+    "<div class=\"row\">"
+    + "<span class=\"t\">" + esc(e.time) + "</span>"
+    + "<span class=\"entry\">"
+    + "<span class=\"who\">" + esc(e.caseId) + " · " + esc(e.container) + "</span>"
+    + "<span>agent: " + esc(e.agentDecision) + "</span>"
+    + "<span class=\"" + logActionClass(e.humanAction) + "\">human: " + esc(e.humanAction)
+    + (e.note ? " — " + esc(e.note) : "") + "</span>"
+    + "</span></div>"
+  ).join("");
+}
+
+/* What the agent decided, for the log: the status, plus the escalation
+   trigger name when there is one. Never the rationale — that is prose,
+   it belongs in the main panel, and truncating it produces fragments. */
+function agentDecisionSummary(fields) {
+  const status = fields._status || "UNKNOWN";
+  const escalation = (fields.ESCALATION || "").trim();
+
+  if (!escalation || escalation.toUpperCase() === "NONE") return status;
+
+  /* Triggers are written "Trigger name — evidence". Keep the name only. */
+  const trigger = escalation.split(/[—-]{1,2}\s/)[0].trim().replace(/[.:]$/, "");
+  return trigger && trigger.length <= 40 ? status + " (" + trigger + ")" : status;
+}
+
+/* ------------------------------------------------------------------
+   RENDERING THE AGENT'S OUTPUT — every field with its label.
+   ------------------------------------------------------------------ */
+
+function renderFieldRows(fields, decision) {
+  const edits = { RECOMMENDATION: decision.recommendation, "RETURN DAY": decision.returnDay };
+
+  return AGENT_FIELDS.map(label => {
+    const original = (label in fields) ? fields[label] : "";
+    const edited = edits[label];
+    const wasEdited = edited !== null && edited !== undefined && edited !== original;
+
+    let shown;
+    let cls = "v";
+
+    if (label === "STATUS") {
+      shown = statusBadge(fields._status);
+    } else if (wasEdited) {
+      shown = esc(edited)
+        + "<div class=\"meta-line\">Edited by human. The agent wrote: "
+        + esc(original || "(nothing)") + "</div>";
+    } else if (original === "") {
+      shown = "<span class=\"muted\">(field missing)</span>";
+    } else {
+      shown = esc(original);
+      if (label === "WHY") cls = "v why";
+    }
+
+    return "<div class=\"field\"><div class=\"k\">" + esc(label) + "</div>"
+         + "<div class=\"" + cls + "\">" + shown + "</div></div>";
+  }).join("");
+}
+
+/* Citations as chips, each one checked against the real files. */
+function renderCitationTags(fields) {
+  const citations = fields._citations || [];
+  if (!citations.length) {
+    return "<div class=\"error-note\">No citations given. The agent did not say what it read.</div>";
+  }
+
+  const chips = citations.map(c =>
+    "<span class=\"chip cite\" title=\"" + esc(c.source) + "\">"
+    + esc(c.text) + (c.valid ? "" : " · NOT FOUND") + "</span>"
+  ).join(" ");
+
+  const bad = citations.filter(c => !c.valid).length;
+  const head = bad
+    ? "<div class=\"error-note\">Citation check failed: " + bad + " of " + citations.length
+      + " not found in your data or policy files.</div>"
+    : "<p class=\"meta-line\">All " + citations.length
+      + " citations verified against your data and policy files.</p>";
+
+  return head + "<p>" + chips + "</p>";
+}
+
+/* The three buttons, plus the inline editor when Edit is open. */
+function renderGate(caseId, fields, decision) {
+  const containerId = fields.CONTAINER || "(no container id)";
+  const key = decisionKey(caseId, containerId);
+  const attrs = 'data-key="' + esc(key) + '"';
+
+  const state = gateState(key);
+  const kind = state.indexOf("APPROVED") !== -1 ? "ok"
+             : state.indexOf("EDITED") !== -1 ? "warn"
+             : state.indexOf("ESCALATED") !== -1 ? "danger" : "neutral";
+
+  let html = "<p>" + esc(containerId) + " " + badge(state, kind) + "</p>";
+  if (decision.note) html += "<p class=\"meta-line\">Note: " + esc(decision.note) + "</p>";
+
+  if (decision.error) {
+    html += "<div class=\"error-note\">" + esc(decision.error) + "</div>";
+  }
+
+  if (decision.escalating) {
+    html += "<div class=\"row-gap\">"
+         + "<div><label class=\"meta-line\">Escalate to</label>"
+         + "<select class=\"escalate-owner field-input\" " + attrs + ">"
+         + ESCALATION_OWNERS.map(owner =>
+             "<option value=\"" + esc(owner.name) + "\""
+             + (decision.owner === owner.name ? " selected" : "")
+             + ">" + esc(owner.name) + " &mdash; " + esc(owner.handles) + "</option>"
+           ).join("")
+         + "</select></div>"
+         + "<div><label class=\"meta-line\">Reason (required)</label>"
+         + "<input class=\"escalate-reason field-input\" " + attrs + " value=\"" + esc(decision.note) + "\"></div>"
+         + "<div><button type=\"button\" class=\"btn danger gate-btn\" data-action=\"confirm-escalate\" " + attrs + ">Confirm escalation</button> "
+         + "<button type=\"button\" class=\"btn gate-btn\" data-action=\"cancel\" " + attrs + ">Cancel</button></div>"
+         + "</div>";
+    return html;
+  }
+
+  if (decision.editing) {
+    const rec = decision.recommendation !== null ? decision.recommendation : (fields.RECOMMENDATION || "");
+    const day = decision.returnDay !== null ? decision.returnDay : (fields["RETURN DAY"] || "");
+    html += "<div class=\"row-gap\">"
+         + "<div><label class=\"meta-line\">Recommendation</label>"
+         + "<textarea " + attrs + " class=\"edit-rec field-input\" rows=\"4\">" + esc(rec) + "</textarea></div>"
+         + "<div><label class=\"meta-line\">Return day</label>"
+         + "<input " + attrs + " class=\"edit-day field-input\" value=\"" + esc(day) + "\"></div>"
+         + "<div><button type=\"button\" class=\"btn primary gate-btn\" data-action=\"save\" " + attrs + ">Save</button> "
+         + "<button type=\"button\" class=\"btn gate-btn\" data-action=\"cancel\" " + attrs + ">Cancel</button></div>"
+         + "</div>";
+  } else {
+    html += "<p>"
+         + "<button type=\"button\" class=\"btn primary gate-btn\" data-action=\"approve\" " + attrs + ">Approve</button> "
+         + "<button type=\"button\" class=\"btn gate-btn\" data-action=\"edit\" " + attrs + ">Edit</button> "
+         + "<button type=\"button\" class=\"btn danger gate-btn\" data-action=\"escalate\" " + attrs + ">Escalate</button>"
+         + "</p>";
+  }
+
+  return html;
+}
+
+/* The reason a container was refused, for the status line. */
+function refusalReason(fields) {
+  const escalation = (fields.ESCALATION || "").trim();
+  if (escalation && escalation.toUpperCase() !== "NONE") return escalation;
+  const rec = (fields.RECOMMENDATION || "").trim();
+  return rec || "no reason given";
+}
+
+/* ── STAGE 3 · DECISION — what it chose and why, one line each ── */
+function renderDecision(parsed, meta) {
+  let html = "<p>" + statusBadge(parsed.runStatus) + "</p>";
+  html += "<p class=\"meta-line\">" + esc(meta.model) + " · "
+       + meta.contextChars + " characters of context · answered in " + meta.seconds + "s</p>";
+
+  if (!parsed.ok) {
+    html += "<div class=\"error-note\"><strong>Agent output did not match format.</strong> "
+         + esc(parsed.problems.join("; ")) + ". The raw text is at the bottom.</div>";
+  }
+
+  if (parsed.summary) {
+    html += "<div class=\"field\"><div class=\"k\">Warehouse</div><div class=\"v\">"
+         + esc(parsed.summary) + "</div></div>";
+  }
+
+  if (!parsed.blocks.length) {
+    html += "<p class=\"muted\">The agent returned no container decisions.</p>";
+    return html;
+  }
+
+  parsed.blocks.forEach(fields => {
+    const label = fields.CONTAINER || "(no container id)";
+    const decision = getDecision(decisionKey(meta.caseId, label));
+    const chose = decision.recommendation !== null
+      ? decision.recommendation
+      : (fields.RECOMMENDATION || "(nothing)");
+
+    html += "<div class=\"field\">"
+         + "<div class=\"k\">" + esc(label) + "<br>" + statusBadge(fields._status) + "</div>"
+         + "<div class=\"v\">" + esc(chose)
+         + "<div class=\"v why\">" + esc(fields.WHY || "(no reasons given)") + "</div>"
+         + "</div></div>";
+
+    if (fields._status === "REFUSED-ESCALATE") {
+      html += "<div class=\"error-note\">" + esc(label) + " refused &mdash; "
+           + esc(refusalReason(fields)) + "</div>";
+    }
+  });
+
+  return html;
+}
+
+/* ── STAGE 4 · OUTPUT — every field labeled, plus checked citations ── */
+function renderOutputFields(parsed, meta) {
+  if (!parsed.blocks.length) {
+    return "<p class=\"muted\">No labeled fields were returned.</p>";
+  }
+
+  let html = "";
+  if (parsed.citationProblems && parsed.citationProblems.length) {
+    html += "<div class=\"error-note\"><strong>Citation check failed.</strong> "
+         + esc(parsed.citationProblems.join("; ")) + ".</div>";
+  }
+
+  parsed.blocks.forEach(fields => {
+    const label = fields.CONTAINER || "(no container id)";
+    const decision = getDecision(decisionKey(meta.caseId, label));
+    html += renderFieldRows(fields, decision);
+    html += renderCitationTags(fields);
+  });
+
+  return html;
+}
+
+/* ── STAGE 5 · REVIEW — the human gate, one decision per container ── */
+function renderReview(parsed, meta) {
+  if (!parsed.blocks.length) {
+    return "<p class=\"muted\">Nothing to review &mdash; the agent returned no containers.</p>";
+  }
+
+  const pending = parsed.blocks.filter(fields =>
+    !getDecision(decisionKey(meta.caseId, fields.CONTAINER || "(no container id)")).action
+  ).length;
+
+  let html = "<p class=\"meta-line\">" + pending + " of " + parsed.blocks.length
+    + " container(s) still awaiting a decision.</p>";
+
+  parsed.blocks.forEach(fields => {
+    const label = fields.CONTAINER || "(no container id)";
+    html += renderGate(meta.caseId, fields, getDecision(decisionKey(meta.caseId, label)));
+  });
+
+  /* Small, permanent, never dismissed. */
+  html += "<p class=\"boundary-note\">Nothing is sent without human approval.</p>";
+
+  return html;
+}
+
+/* ------------------------------------------------------------------
+   RUN BUTTONS
+   ------------------------------------------------------------------ */
+
+async function runCase(caseId) {
+  const evalCase = EVAL_CASES.find(c => c.case_id === caseId);
+  const userMessage = buildUserMessage(evalCase);
+
+  /* Progress lives in state, not in the DOM, so switching cases mid-run
+     cannot leave a dangling element reference. */
+  RUN_STATE[caseId] = { running: true, error: "" };
+  delete RESULTS[caseId];
+  renderConsole();
+
+  let outcome = "ERROR";
+  const startedAt = Date.now();
+  try {
+    const text = await callAgent(userMessage);
+    const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+
+    let parsed;
+    try {
+      parsed = parseAgentOutput(text);
+    } catch (parseErr) {
+      parsed = { summary: "", blocks: [], ok: false, runStatus: "NO RESULT",
+                 problems: ["the parser itself failed: " + parseErr.message] };
+    }
+
+    /* A fresh run replaces any earlier decisions on this case. */
+    parsed.blocks.forEach(fields => {
+      delete DECISIONS[decisionKey(caseId, fields.CONTAINER || "(no container id)")];
+    });
+
+    outcome = parsed.runStatus;
+
+    RESULTS[caseId] = {
+      parsed: parsed,
+      rawText: text,
+      meta: { model: MODEL, contextChars: userMessage.length, seconds: seconds,
+              caseId: caseId, runAt: new Date().toISOString() }
+    };
+    RUN_STATE[caseId] = { running: false, error: "" };
+    saveEvalResults();
+    renderConsole();
+
+    /* Every container arrives awaiting a human. Nothing is complete yet. */
+    parsed.blocks.forEach(fields => {
+      logEvent({
+        time: timeNow(),
+        caseId: caseId,
+        container: fields.CONTAINER || "(no container id)",
+        agentDecision: agentDecisionSummary(fields),
+        humanAction: "awaiting review",
+        note: ""
+      });
+    });
+    if (!parsed.blocks.length) {
+      logEvent({
+        time: timeNow(), caseId: caseId, container: "—",
+        agentDecision: parsed.runStatus + " · output did not parse",
+        humanAction: "awaiting review", note: parsed.problems.join("; ")
+      });
+    }
+  } catch (err) {
+    outcome = "ERROR";
+    RUN_STATE[caseId] = { running: false, error: err.message };
+    renderConsole();
+    logEvent({
+      time: timeNow(), caseId: caseId, container: "—",
+      agentDecision: "ERROR — no answer from the agent",
+      humanAction: "—", note: err.message
+    });
+  } finally {
+    if (RUN_STATE[caseId]) RUN_STATE[caseId].running = false;
+  }
+
+  return outcome;
+}
+
+/* ------------------------------------------------------------------
+   RUN ALL — every case in sequence, one after another.
+
+   Sequential on purpose: five parallel calls invite rate limiting, and
+   a sweep that half-fails for that reason tells you nothing about the
+   agent.
+   ------------------------------------------------------------------ */
+
+let SWEEP_RUNNING = false;
+
+function setButtonsDisabled(disabled) {
+  document.querySelectorAll(".run-btn").forEach(b => { b.disabled = disabled; });
+  const runAll = document.getElementById("run-all");
+  if (runAll) runAll.disabled = disabled;
+}
+
+async function runAll() {
+  if (SWEEP_RUNNING) return;
+  SWEEP_RUNNING = true;
+
+  const statusEl = document.getElementById("run-all-status");
+  const summaryEl = document.getElementById("run-all-summary");
+  const tally = { "OK": 0, "REFUSED-ESCALATE": 0, "ERROR": 0, "NO RESULT": 0 };
+  const perCase = [];
+
+  setButtonsDisabled(true);
+  summaryEl.innerHTML = "<p><span class=\"thinking\">Sweep in progress…</span></p>";
+
+  const startedAt = Date.now();
+  try {
+    for (let i = 0; i < EVAL_CASES.length; i++) {
+      const caseId = EVAL_CASES[i].case_id;
+      statusEl.textContent =
+        "Running " + caseId + " — case " + (i + 1) + " of " + EVAL_CASES.length + "…";
+
+      /* runCase re-enables its own button; keep the sweep locked. */
+      const outcome = await runCase(caseId);
+      setButtonsDisabled(true);
+
+      tally[outcome] = (tally[outcome] || 0) + 1;
+      perCase.push({ caseId: caseId, outcome: outcome });
+    }
+  } finally {
+    SWEEP_RUNNING = false;
+    setButtonsDisabled(false);
+  }
+
+  const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+  statusEl.textContent = "Sweep finished in " + seconds + "s.";
+
+  const rows = perCase.map(r =>
+    "<tr><td class=\"mono\">" + esc(r.caseId) + "</td><td>" + statusBadge(r.outcome) + "</td></tr>"
+  ).join("");
+
+  summaryEl.innerHTML =
+    "<div class=\"scoreboard\">"
+    + "<div class=\"stat ok\"><div class=\"n\">" + tally["OK"] + "</div><div class=\"l\">OK</div></div>"
+    + "<div class=\"stat danger\"><div class=\"n\">" + tally["REFUSED-ESCALATE"]
+    + "</div><div class=\"l\">Refused</div></div>"
+    + "<div class=\"stat warn\"><div class=\"n\">" + (tally["ERROR"] + tally["NO RESULT"])
+    + "</div><div class=\"l\">Errors</div></div>"
+    + "</div>"
+    + "<table class=\"data-table\"><tr><th>Case</th><th>Result</th></tr>" + rows + "</table>"
+    + "<p class=\"boundary-note\">This is what the agent decided. It is not a verdict &mdash;"
+    + " compare each result against its expected behaviour before scoring it.</p>";
+}
+
+/* Find the agent's block for one container, so the log can quote it. */
+function findBlock(caseId, containerId) {
+  const stored = RESULTS[caseId];
+  if (!stored) return null;
+  return stored.parsed.blocks.find(f => (f.CONTAINER || "(no container id)") === containerId) || null;
+}
+
+function handleGate(action, key) {
+  const split = key.indexOf("|");
+  const caseId = key.slice(0, split);
+  const containerId = key.slice(split + 1);
+  const decision = getDecision(key);
+  const fields = findBlock(caseId, containerId);
+
+  decision.error = "";
+
+  if (action === "approve") {
+    decision.action = "Approved";
+    decision.editing = false;
+    decision.escalating = false;
+  } else if (action === "edit") {
+    decision.editing = true;
+    decision.escalating = false;
+    renderConsole();
+    return;
+  } else if (action === "escalate") {
+    /* Open the inline reason panel. No browser dialogs — prompt() is not
+       available in every browser this file gets opened in. */
+    decision.escalating = true;
+    decision.editing = false;
+    renderConsole();
+    return;
+  } else if (action === "cancel") {
+    decision.editing = false;
+    decision.escalating = false;
+    renderConsole();
+    return;
+  } else if (action === "save") {
+    const recEl = document.querySelector('.edit-rec[data-key="' + key + '"]');
+    const dayEl = document.querySelector('.edit-day[data-key="' + key + '"]');
+    decision.recommendation = recEl ? recEl.value.trim() : decision.recommendation;
+    decision.returnDay = dayEl ? dayEl.value.trim() : decision.returnDay;
+    decision.action = "Edited";
+    decision.editing = false;
+  } else if (action === "confirm-escalate") {
+    const ownerEl = document.querySelector('.escalate-owner[data-key="' + key + '"]');
+    const reasonEl = document.querySelector('.escalate-reason[data-key="' + key + '"]');
+    const owner = ownerEl ? ownerEl.value : ESCALATION_OWNERS[0].name;
+    const reason = reasonEl ? reasonEl.value.trim() : "";
+
+    decision.owner = owner;
+    if (!reason) {
+      /* No reason, no escalation. An unexplained handoff is not a decision. */
+      decision.error = "Enter a reason before escalating. Nothing has been recorded.";
+      renderConsole();
+      return;
+    }
+    decision.action = "Escalated to " + owner;
+    decision.note = reason;
+    decision.escalating = false;
+  }
+
+  logEvent({
+    time: timeNow(),
+    caseId: caseId,
+    container: containerId,
+    agentDecision: fields ? agentDecisionSummary(fields) : "(no agent block)",
+    humanAction: decision.action,
+    note: action === "save"
+      ? "Recommendation rewritten by human"
+      : (decision.note || "")
+  });
+
+  renderConsole();
+}
+
+document.addEventListener("click", function (event) {
+  if (event.target.closest("#run-all")) { runAll(); return; }
+
+  const chip = event.target.closest("#demo-chips .chip");
+  if (chip) { selectCase(chip.getAttribute("data-chip"), true); return; }
+
+  const card = event.target.closest(".case-card");
+  if (card) { selectCase(card.getAttribute("data-case"), false); return; }
+
+  const runButton = event.target.closest(".run-btn");
+  if (runButton) { runCase(runButton.getAttribute("data-case")); return; }
+
+  const gateButton = event.target.closest(".gate-btn");
+  if (!gateButton) return;
+
+  /* A button that quietly does nothing is the worst kind of bug: the
+     reviewer cannot tell a broken click from a decision that was not made.
+     Any failure in here gets shown on screen. */
+  try {
+    handleGate(gateButton.getAttribute("data-action"), gateButton.getAttribute("data-key"));
+  } catch (err) {
+    const key = gateButton.getAttribute("data-key");
+    const decision = getDecision(key);
+    decision.error = "That click failed: " + err.message;
+    renderConsole();
+  }
+});
+
+loadEvalResults();
+renderConsole();
+renderRunLog();
+</script>

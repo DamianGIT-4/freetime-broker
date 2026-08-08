@@ -1,0 +1,23 @@
+# Freetime Broker — publish only the product.
+#
+# This project was built inside the course companion folder, so the repo root
+# also holds coursework and kit docs that must NOT be public. This file works
+# as a whitelist: ignore everything, then re-include the four things that ship.
+# Anything new added at the root stays private unless it is listed here.
+
+# 1. Ignore everything at the repo root.
+/*
+
+# 2. Re-include only the product.
+!/index.html
+!/data/
+!/policies/
+!/design/
+
+# 3. Keep this file itself tracked.
+!/.gitignore
+
+# 4. Never ship OS or editor junk, even from inside the folders above.
+.DS_Store
+Thumbs.db
+*.log
