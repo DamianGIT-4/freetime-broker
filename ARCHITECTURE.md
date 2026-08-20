@@ -84,6 +84,40 @@ node test/engine-test.js index.html
 
 Set `SHOW_BRIEF=1` to print the brief the model actually receives.
 
+## Measuring the model, not testing it once
+
+`test/engine-test.js` proves the arithmetic. It says nothing about whether the model narrates it correctly, which is the failure mode this change might not fix.
+
+That is what `test/eval-runner.js` is for. It runs each case N times and reports a **pass rate**:
+
+```bash
+export ANTHROPIC_API_KEY=...
+node test/eval-runner.js --runs 20
+node test/eval-runner.js --case EV-03 --runs 30
+```
+
+A rate rather than a verdict, because the agent is non-deterministic — cases have been observed behaving differently on identical input, so one run is close to noise.
+
+What it checks is only what the engine can independently prove:
+
+- `STATUS` matches the case's expected status
+- `RECOMMENDATION` names the total the engine marked cheapest
+- `OPTIONS` reproduces the engine's totals rather than quietly altering one
+- refusals carry no cost figure, no return day, and cite the required sections
+- the output parsed into labelled fields at all
+
+This became possible only after the engine existed. Before it, there was no independent ground truth on a live container, which is why every verdict had to be hand-entered.
+
+It still does not score the explanation. That stays a human judgement in `evals/RESULTS.md`, and the console still never scores itself.
+
+The runner extracts the prompt, the policies and the engine directly out of `index.html` rather than reimplementing them, so what is measured and what is served cannot drift apart. It self-tests too:
+
+```bash
+node test/eval-runner.js --self-test    # no API call
+```
+
+That replays the recorded EV-03 bug — every figure correct, the cheapest lever named, then a refusal citing the rule it had just satisfied — and confirms the checks catch it, along with a subtler case where a total is quietly altered from 600 to 550. A harness that cannot fail known-bad output cannot be trusted to pass anything.
+
 ## The general lesson
 
 The reliable half of this agent was always the judgement half — spotting that data contradicts itself, recognising that a contracted carrier supplying an uncontracted unit type is still out of contract, and explaining why in language a person can check. Those are genuinely hard, and the model did them correctly on every run.

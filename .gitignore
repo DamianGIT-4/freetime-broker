@@ -13,6 +13,12 @@
 !/ARCHITECTURE.md
 !/index.html
 !/test/
+!/evals/
+
+# Never ship secrets, whatever the whitelist above says.
+.env
+.env.*
+*.key
 !/data/
 !/policies/
 !/design/
