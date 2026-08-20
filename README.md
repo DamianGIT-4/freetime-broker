@@ -34,12 +34,25 @@ Your key is stored only in your own browser's `localStorage` and is sent only to
 
 Without a key, you get the console's first-load state, which is the honest thing to show.
 
+## How it's built
+
+The arithmetic is **not** done by the language model. Application code computes coverage against the carrier contract, the overrun in days, every lever priced on one basis, the cheapest option, and the allocation of contested move slots under the warehouse's daily cap. The model receives those figures as fact.
+
+```text
+code   ->  multiply, compare, rank, allocate     deterministic
+model  ->  coherence, boundaries, explanation    judgement
+```
+
+This split exists because the eval set showed exactly where the model was reliable and where it wasn't — the two cases it always passed are the two requiring no arithmetic at all. [ARCHITECTURE.md](ARCHITECTURE.md) has the full reasoning, the evidence that prompted it, and what it does *not* fix.
+
+Run `node test/engine-test.js index.html` to check every figure against the eval expectations. No API key needed.
+
 ## Honest limits
 
 This prototype is evaluated against five test cases whose expected behaviour was written before the agent ever ran. The current scoreboard is **three pass, one needs work, one fail** — and the failures are visible in the app's own Evals view rather than hidden.
 
 - **Refusal boundaries hold reliably.** Given a container type outside the carrier's contract, or two data fields that contradict each other, it refuses, cites the policy sections and escalates rather than inventing a number. These pass on every run.
-- **The arithmetic and ranking do not.** It reasons about each container in its own block, so two containers competing for one move slot can both be awarded it. On some runs it prices every lever correctly, names the cheapest, and then declines to recommend it.
+- **The arithmetic and ranking used to be the weak half, and that is what the pricing engine addresses.** The model no longer computes totals, ranks containers against the daily move cap, or decides whether a unit type is covered — code does all three, and the engine's figures are checked by 42 assertions against the documented eval expectations. **The scoreboard above predates that change and has not yet been re-run against the live model**, so it reflects the old design. It will be re-recorded rather than assumed.
 - **It takes its data at face value.** It can catch two fields contradicting each other; it cannot catch one that is simply out of date.
 - **It cannot see intent.** A container held deliberately looks identical in the data to one that was forgotten.
 - **Verified citations do not mean correct reasoning.** The console checks that a cited policy section exists, not that it says what the agent claims. A wrong recommendation has arrived carrying eight valid citations.

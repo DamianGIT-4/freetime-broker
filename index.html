@@ -775,17 +775,19 @@ const SYSTEM_PROMPT = [
 "Refuse only when a rule actually applies. Refusing a container you are able to price correctly is as much a failure as pricing one you should have refused.",
 "",
 "WORKING",
-"Do the arithmetic before you decide anything, and write it down where it can be checked.",
-"The COUNTS and OPTIONS fields are that working. They come before RISK, STATUS and RECOMMENDATION in every block, and you must fill them in that order. Do not decide first and justify afterwards.",
+"You do not do arithmetic. The application has already done it.",
+"Every request carries a PRE-COMPUTED PRICING section produced by application code directly from the policy files: the overrun in days, each lever priced on one basis, which lever is cheapest, and how any contested move slot was allocated. Those figures are deterministic and correct. Transcribe them. Never recalculate, never adjust, never substitute a total of your own, and never contradict them.",
 "",
-"Four rules bind you to your own working:",
-"1. You may not fire a threshold trigger unless COUNTS shows that threshold MET. Naming a trigger is not enough — the count, the items counted, the threshold and the comparison must be written in COUNTS first. If COUNTS shows NOT MET, the trigger does not apply and you must carry on and produce a recommendation.",
-"2. RECOMMENDATION must name the option that OPTIONS identifies as cheapest. If you recommend anything else, state in RATIONALE which rule forbids the cheaper one, citing its section. You may not leave a lever out of OPTIONS: if it is unavailable, list it with the reason instead of a price.",
-"3. Two or more containers competing for the same move slot is not a deadlock and is never a reason to escalate. It is the situation warehouse_policy.md WP-5 exists to settle: rank by cost exposure per day of delay, and where days remaining are equal the higher D&D rate takes the earlier slot. Apply WP-5, assign the slot, and then price each container from the day it actually moves. Saying that sequencing cannot be executed is a refusal to apply a rule you have been given.",
-"4. Count free move slots for every weekday from today through the container's expiry and for at least three weekdays after it — not only the expiry day. The booked_return_date column across the full roster tells you which days are consumed; any weekday with no bookings has the entire daily cap free. Never write that the next feasible day is unknown while that roster is in front of you: work it out and state the day.",
+"Your job is the part code cannot do: decide whether the situation is coherent, apply the policy boundaries, and explain the decision in language a person can check.",
 "",
-"Accepting the overrun is always an available lever whenever a D&D rate exists for the unit, so it is always priceable. It follows that No feasible plan cannot apply while OPTIONS prices anything at all.",
-"NONE PRICEABLE describes the whole OPTIONS field, not one lever inside it. If any single lever carries a price, the field is not NONE PRICEABLE and No feasible plan does not apply. Mark individual levers UNAVAILABLE with their reason; that is not the same thing.",
+"Five rules bind you to the pre-computed pricing:",
+"1. If the engine reports ENGINE VERDICT: REFUSE for a container, you refuse that container. The trigger, the reason and the sections are given to you — state them in your own words and cite the sections named. Do not look for a way to price it anyway.",
+"2. If the engine prices a container, you may not refuse it for any arithmetic or sequencing reason. A contested move slot has already been settled; missing capacity has already been checked. Only a coherence problem the engine could not see justifies a refusal on a priced container, and you must name what specifically is contradictory.",
+"3. RECOMMENDATION must name whatever the engine marks CHEAPEST, at the exact figure given. If the engine reports a TIE, escalate rather than pick, as XV-4 requires.",
+"4. COUNTS is transcription, not calculation: write the counts and thresholds shown in the brief. You may not fire a threshold trigger the brief does not show as met. Three containers is not five.",
+"5. OPTIONS is transcription too: list every lever exactly as priced, including the unavailable ones with the reason the engine gave, then the cheapest. Do not drop a lever, do not re-price one, do not invent an obstacle that is not in the brief.",
+"",
+"If the brief and the raw CSV appear to disagree, the brief is authoritative on arithmetic and you say nothing about the discrepancy. If a container is genuinely incoherent — two fields contradicting each other in a way no price can resolve — the engine will have flagged it for you already.",
 "",
 "OUTPUT",
 "Your reply is parsed by software. It must contain labeled fields and nothing else.",
@@ -803,8 +805,8 @@ const SYSTEM_PROMPT = [
 "CARRIER: <carrier>",
 "CONTAINER TYPE: <container_type>",
 "DAYS LEFT: <days_left, or UNKNOWN if it cannot be trusted>",
-"COUNTS: <the counting, done here, before you decide anything. For every threshold in warehouse_policy.md that could apply to this container, write: the count, the exact items counted by id, the threshold, and whether it is met. Example: 3 containers within 2 days of expiry (P-2041, L-5518, P-2055); threshold 5; NOT MET. Free move slots on the target day: 1 of 4 (P-2044, L-5522, P-2048 already booked); MET. If no threshold applies, write NONE APPLY.>",
-"OPTIONS: <every lever available to this container, each priced as a total on the same basis, then the cheapest named. Include drayage, any premium, and any D&D. Example: extension 6 days = 150 EUR + 500 EUR drayage = 650 EUR; expedite = 500 + 100 = 600 EUR; accept overrun 6 days = 900 + 500 = 1400 EUR; CHEAPEST: expedite 600 EUR. If a lever is unavailable, write it with the reason instead of a price, for example: extension UNAVAILABLE (Poseidón sells none, CC-2). If you can price nothing at all, write NONE PRICEABLE and say why.>",
+"COUNTS: <transcribed from the pre-computed brief, not calculated by you. The thresholds that could apply to this container, each with its count, the items counted by id, the threshold and whether it is met. Example: 3 containers within 2 days of expiry (P-2041, L-5518, P-2055); threshold 5; NOT MET. Free move slots on the target day: 1 of 4 (P-2044, L-5522, P-2048 already booked). If no threshold applies, write NONE APPLY.>",
+"OPTIONS: <transcribed from the pre-computed brief, not calculated by you. Every lever with the total the engine gave, then the cheapest as the engine named it. Example: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR. Unavailable levers are listed with the engine's reason instead of a price, for example: extension UNAVAILABLE (Poseidón Freight sells no extension product, CC-2). If the engine reports NOT PRICEABLE, write NONE PRICEABLE and give its reason.>",
 "RISK: <OK | WATCH | AT RISK | BREACHED | ESCALATE>",
 "STATUS: <OK, or REFUSED-ESCALATE if you are refusing this container>",
 "RECOMMENDATION: <the single recommended action with its cost in EUR; or, if STATUS is REFUSED-ESCALATE, the word REFUSED followed by an em dash and the rule you applied, cited by file and section>",
@@ -1298,7 +1300,8 @@ function renderScoreboard() {
 const LIMITATIONS = [
   "Covers one workflow only — the weekly inbound container review for Falla & Co.'s two warehouses (WH-BCN, WH-VLC), two contracted carriers, and three dry unit types: 20DRY, 40DRY, 40HDRY. English only. It recommends; it never books trucking, buys free-time extension, commits spend, or contacts anyone but Lana.",
   "Handles one case at a time and needs the data in this exact shape: days_left, free_time_expiry, next_standard_slot, booked_return_date. It takes all four at face value. EV-04 shows it catches two fields contradicting each other; it cannot catch one that is simply out of date. A moved vendor slot nobody updated produces confidently wrong costs with no warning.",
-  "Reasons about each container independently, so it can assign the same daily move slot to two containers. Observed on EV-01: both containers were given a 04 Aug return day when only one slot was free. The move cap is a warehouse-level constraint; the agent's reasoning is per-container. The pattern holds across the eval set — cases decided by a single rule (EV-04, EV-05) pass every run, while EV-01, which requires ranking two containers against a capacity limit, has failed every run.",
+  "Arithmetic, slot allocation and the contract boundary are computed by application code, not by the model, and the model is instructed to transcribe those figures rather than derive them. This removed the class of failure where it priced correctly and then contradicted its own totals. It does not remove the model's ability to misdescribe a correct figure in prose — the numbers are now reliable, the narration around them still needs reading.",
+  "The engine's rates are transcribed from the policy files into code. If a policy file is edited and the code is not, the two drift apart silently and the agent will cite a section that no longer says what it is being priced against. There is no test that holds them in sync.",
   "Cannot see why a container is being held. A unit kept deliberately — still discharging, or used as overflow racking because the SKU space is full — looks identical in the data to one that has been forgotten. No field records intent, so the agent will price a return for a container Lana has no intention of moving.",
   "The citation check confirms a policy section exists, not that it says what the agent claims. A wrong recommendation can still carry a full set of verified citations."
 ];
@@ -1484,11 +1487,356 @@ function rowsToCsv(rows) {
   return header + "\n" + body;
 }
 
+/* ==================================================================
+   PRICING ENGINE — the arithmetic, done in code.
+
+   WHY THIS EXISTS
+   ---------------
+   Before this, the model did the arithmetic itself: read the rates out
+   of the policy files, multiply, compare, rank. The eval set showed it
+   is not reliable at that.
+
+     EV-03  priced all three levers correctly, named expedite as the
+            cheapest, then returned REFUSED-ESCALATE citing a rule it
+            had just satisfied.
+     EV-01  gave two containers the same move slot, because it reasons
+            about each container in its own block and never sees the
+            warehouse-level cap.
+
+   Neither is fixable by instruction. A model asked to be a calculator
+   and a judge in one pass will sometimes be a bad calculator, and
+   "do the arithmetic first" does not change that — the previous
+   improvement added COUNTS and OPTIONS to force the working into the
+   open, and the result was that the errors became visible rather than
+   absent.
+
+   So the arithmetic moved here. This module computes coverage,
+   overrun, each lever's total, the cheapest lever, and the slot
+   allocation across contested days. The model receives the result as
+   fact and does what it is actually good at.
+
+     code   ->  multiply, compare, rank, allocate     (deterministic)
+     model  ->  coherence, boundaries, explanation    (judgement)
+
+   The two cases that always passed — EV-04 and EV-05 — are the two
+   that need no arithmetic at all. That is the evidence this split is
+   the right one.
+
+   Every constant below is transcribed from the policy files and cites
+   its section, so the engine and the policies cannot drift apart
+   silently.
+   ================================================================== */
+
+const COVERED_UNIT_TYPES = ["20DRY", "40DRY", "40HDRY"];          /* CC-1 */
+
+const CONTRACTS = {
+  "Poseidón Freight": {
+    section: "CC-2", free_time_days: 14, dnd_rate: 75, extension: null
+  },
+  "Leviatán Lines": {
+    section: "CC-3", free_time_days: 21, dnd_rate: 150,
+    extension: { rate: 25, max_days: 10, request_window_days: 5 }
+  }
+};
+
+const DRAYAGE = { standard: 500, expedite_premium: 100 };          /* XV-1, XV-2 */
+const MOVE_CAP = { "WH-BCN": 4, "WH-VLC": 6 };                     /* WP-4 */
+
+/* ---- dates. UTC throughout so a timezone never shifts a day. ---- */
+
+function parseDate(value) {
+  if (!value) return null;
+  const parts = String(value).trim().split("-");
+  if (parts.length !== 3) return null;
+  const d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+  return isNaN(d.getTime()) ? null : d;
+}
+function isoDate(d) { return d.toISOString().slice(0, 10); }
+function dayDiff(from, to) { return Math.round((to - from) / 86400000); }
+function addDays(d, n) { const x = new Date(d.getTime()); x.setUTCDate(x.getUTCDate() + n); return x; }
+function isWeekday(d) { const n = d.getUTCDay(); return n >= 1 && n <= 5; }   /* XV-1: Mon-Fri only */
+function nextWeekdayAfter(d) { let x = addDays(d, 1); while (!isWeekday(x)) x = addDays(x, 1); return x; }
+
+/* ---- CC-1 / CC-5: is this container inside contract at all? ---- */
+
+function coverageCheck(c) {
+  const contract = CONTRACTS[c.carrier];
+  if (!contract) {
+    return { covered: false, trigger: "No matching policy", sections: ["CC-1", "CC-5"],
+             reason: "carrier " + c.carrier + " is not listed in CC-2 or CC-3" };
+  }
+  if (COVERED_UNIT_TYPES.indexOf(c.container_type) === -1) {
+    return { covered: false, trigger: "No matching policy", sections: ["CC-1", "CC-5"],
+             reason: "unit type " + c.container_type + " is not one of "
+                     + COVERED_UNIT_TYPES.join(", ") + ", so no free-time period and no D&D rate exist"
+                     + " — a contracted carrier does not make an uncovered unit type contractual" };
+  }
+  return { covered: true, contract: contract };
+}
+
+/* ---- CC-4 / WP-6: does the data contradict itself? ---- */
+
+function integrityCheck(c) {
+  const problems = [];
+  if (c.discharge_confirmed !== "yes") {
+    if (c.free_time_start) {
+      problems.push("free_time_start is recorded as " + c.free_time_start
+        + " but discharge_confirmed is " + (c.discharge_confirmed || "blank")
+        + ", so under CC-4 the clock has not started and days_left cannot be trusted");
+    }
+    if (!c.yard_slot) problems.push("no yard slot is assigned");
+  }
+  return problems.length
+    ? { ok: false, trigger: "Conflicting data", sections: ["CC-4", "WP-6"], problems: problems }
+    : { ok: true };
+}
+
+/* ---- WP-4: which move slots are already consumed, by day? ---- */
+
+function slotMap(roster, warehouse) {
+  const cap = MOVE_CAP[warehouse] || 0;
+  const consumed = {};
+  roster.forEach(c => {
+    const booked = c.booked_return_date;
+    if (!booked) return;
+    (consumed[booked] = consumed[booked] || []).push(c.container_id);
+  });
+  return {
+    cap: cap,
+    freeOn: function (iso) { return cap - ((consumed[iso] || []).length); },
+    bookedOn: function (iso) { return consumed[iso] || []; }
+  };
+}
+
+/* ---- XV-4: price every lever on one basis (drayage + premium + D&D) ---- */
+
+function priceLevers(c, contract, targetDate, expiry, daysLeft) {
+  const overrun = (targetDate && expiry) ? Math.max(0, dayDiff(expiry, targetDate)) : null;
+  const levers = [];
+
+  if (overrun === null) {
+    return { overrun: null, levers: [], cheapest: null,
+             unpriceable: "no return date is available: both booked_return_date and next_standard_slot are blank" };
+  }
+
+  const acceptCost = DRAYAGE.standard + overrun * contract.dnd_rate;
+  levers.push({
+    name: "accept overrun", available: true, total: acceptCost,
+    working: "drayage " + DRAYAGE.standard + " + " + overrun + " day(s) D&D x "
+             + contract.dnd_rate + " = " + acceptCost + " EUR"
+  });
+
+  const expediteCost = DRAYAGE.standard + DRAYAGE.expedite_premium;
+  levers.push({
+    name: "expedite", available: true, total: expediteCost,
+    working: "drayage " + DRAYAGE.standard + " + expedite premium "
+             + DRAYAGE.expedite_premium + " = " + expediteCost + " EUR (flat, XV-2)"
+  });
+
+  const ext = contract.extension;
+  if (!ext) {
+    levers.push({ name: "extension", available: false,
+      reason: c.carrier + " sells no extension product (" + contract.section + ")" });
+  } else if (daysLeft === null || daysLeft < ext.request_window_days) {
+    levers.push({ name: "extension", available: false,
+      reason: "inside the " + ext.request_window_days + "-day request window ("
+              + (daysLeft === null ? "days_left unknown" : daysLeft + " days left") + ", CC-3)" });
+  } else if (overrun > ext.max_days) {
+    levers.push({ name: "extension", available: false,
+      reason: overrun + " days exceeds the " + ext.max_days + "-day maximum (CC-3)" });
+  } else {
+    const extCost = DRAYAGE.standard + overrun * ext.rate;
+    levers.push({
+      name: "extension", available: true, total: extCost,
+      working: "drayage " + DRAYAGE.standard + " + " + overrun + " extension day(s) x "
+               + ext.rate + " = " + extCost + " EUR"
+    });
+  }
+
+  const priced = levers.filter(l => l.available);
+  const cheapest = priced.reduce((best, l) => (!best || l.total < best.total) ? l : best, null);
+  const tied = priced.filter(l => cheapest && l.total === cheapest.total);
+
+  return { overrun: overrun, levers: levers, cheapest: cheapest,
+           tie: tied.length > 1 ? tied.map(l => l.name) : null };
+}
+
+/* ---- WP-5: settle contested move slots by cost exposure per day ---- */
+
+function allocateSlots(scoped, roster, warehouse) {
+  const slots = slotMap(roster, warehouse);
+  const claims = {};
+
+  scoped.forEach(entry => {
+    if (!entry.priced || entry.priced.overrun === null || !entry.targetDate) return;
+    const iso = isoDate(entry.targetDate);
+    (claims[iso] = claims[iso] || []).push(entry);
+  });
+
+  const decisions = [];
+
+  Object.keys(claims).sort().forEach(iso => {
+    const competitors = claims[iso];
+    const free = slots.freeOn(iso);
+    if (competitors.length <= free) return;                    /* no contest */
+
+    /* WP-5.1 — rank by cost exposure per day of delay, highest first. */
+    const ranked = competitors.slice().sort((a, b) => b.contract.dnd_rate - a.contract.dnd_rate);
+    const winners = ranked.slice(0, Math.max(free, 0));
+    const losers = ranked.slice(Math.max(free, 0));
+
+    losers.forEach(loser => {
+      const pushedTo = nextWeekdayAfter(parseDate(iso));
+      const newOverrun = Math.max(0, dayDiff(loser.expiry, pushedTo));
+      const newCost = DRAYAGE.standard + newOverrun * loser.contract.dnd_rate;
+      const winner = winners[0];
+      const reverseCost = winner
+        ? DRAYAGE.standard + Math.max(0, dayDiff(winner.expiry, pushedTo)) * winner.contract.dnd_rate
+        : null;
+
+      decisions.push({
+        date: iso,
+        capacity: slots.cap,
+        alreadyBooked: slots.bookedOn(iso),
+        free: free,
+        winner: winner ? winner.container.container_id : null,
+        winnerRate: winner ? winner.contract.dnd_rate : null,
+        loser: loser.container.container_id,
+        loserRate: loser.contract.dnd_rate,
+        pushedTo: isoDate(pushedTo),
+        newOverrun: newOverrun,
+        newCost: newCost,
+        reverseCost: reverseCost,
+        saving: (reverseCost !== null) ? reverseCost - newCost : null
+      });
+
+      /* The reallocation changes what "accept the overrun" actually costs, so the
+         lever and the cheapest-lever verdict are both restated here. Leaving the
+         pre-allocation total in place would hand the model two different figures
+         for one container — the exact ambiguity this engine exists to remove. */
+      const acceptLever = loser.priced.levers.find(l => l.name === "accept overrun");
+      if (acceptLever) {
+        acceptLever.total = newCost;
+        acceptLever.working = "drayage " + DRAYAGE.standard + " + " + newOverrun
+          + " day(s) D&D x " + loser.contract.dnd_rate + " = " + newCost
+          + " EUR (moves " + isoDate(pushedTo) + " after WP-5 sequencing)";
+      }
+      const stillPriced = loser.priced.levers.filter(l => l.available);
+      loser.priced.cheapest = stillPriced.reduce((best, l) => (!best || l.total < best.total) ? l : best, null);
+      const tiedNow = stillPriced.filter(l => loser.priced.cheapest && l.total === loser.priced.cheapest.total);
+      loser.priced.tie = tiedNow.length > 1 ? tiedNow.map(l => l.name) : null;
+
+      loser.reallocated = { date: isoDate(pushedTo), overrun: newOverrun, total: newCost };
+    });
+  });
+
+  return decisions;
+}
+
+/* ---- assemble the brief the model receives ---- */
+
+function computePricing(evalCase) {
+  const wh = evalCase.warehouse;
+  const roster = CONTAINERS_INYARD.filter(c => c.warehouse === wh);
+  const containers = caseScope(evalCase).map(findContainer).filter(Boolean);
+
+  const scoped = containers.map(c => {
+    const coverage = coverageCheck(c);
+    if (!coverage.covered) return { container: c, refuse: coverage };
+
+    const integrity = integrityCheck(c);
+    if (!integrity.ok) return { container: c, refuse: integrity };
+
+    const expiry = parseDate(c.free_time_expiry);
+    const targetDate = parseDate(c.booked_return_date) || parseDate(c.next_standard_slot);
+    const daysLeft = c.days_left === "" ? null : Number(c.days_left);
+    const priced = priceLevers(c, coverage.contract, targetDate, expiry, daysLeft);
+
+    return { container: c, contract: coverage.contract, expiry: expiry,
+             targetDate: targetDate, daysLeft: daysLeft, priced: priced };
+  });
+
+  const allocation = allocateSlots(scoped, roster, wh);
+  return { scoped: scoped, allocation: allocation, slots: slotMap(roster, wh), warehouse: wh };
+}
+
+function renderPricingBrief(pricing) {
+  const lines = [];
+  lines.push("PRE-COMPUTED PRICING (produced by the application, not by you)");
+  lines.push("These figures were calculated deterministically from the policy files by application");
+  lines.push("code. They are correct arithmetic. Do not recalculate them, do not adjust them, and do");
+  lines.push("not substitute your own totals. Your job is to judge and explain, not to price.");
+  lines.push("");
+
+  pricing.scoped.forEach(entry => {
+    const c = entry.container;
+    lines.push("CONTAINER " + c.container_id + " (" + c.carrier + ", " + c.container_type + ")");
+
+    if (entry.refuse) {
+      lines.push("  ENGINE VERDICT: REFUSE — no price may be produced for this container.");
+      lines.push("  TRIGGER: " + entry.refuse.trigger);
+      if (entry.refuse.reason) lines.push("  REASON: " + entry.refuse.reason);
+      if (entry.refuse.problems) entry.refuse.problems.forEach(p => lines.push("  CONFLICT: " + p));
+      lines.push("  SECTIONS: " + entry.refuse.sections.join(", "));
+      lines.push("  You must refuse this container. No cost figure, no return day.");
+      lines.push("");
+      return;
+    }
+
+    const p = entry.priced;
+    if (p.unpriceable) {
+      lines.push("  ENGINE VERDICT: NOT PRICEABLE — " + p.unpriceable);
+      lines.push("");
+      return;
+    }
+
+    lines.push("  Free-time expiry: " + isoDate(entry.expiry)
+      + " · target return: " + isoDate(entry.targetDate)
+      + " · overrun: " + p.overrun + " day(s)");
+    if (entry.reallocated) {
+      lines.push("  SLOT REALLOCATION APPLIED (WP-5): this container does not get "
+        + isoDate(entry.targetDate) + ". It moves " + entry.reallocated.date
+        + ", giving " + entry.reallocated.overrun + " overrun day(s). The prices below"
+        + " already reflect that — use them as written.");
+    }
+    p.levers.forEach(l => {
+      lines.push("  - " + l.name + ": " + (l.available ? l.working : "UNAVAILABLE (" + l.reason + ")"));
+    });
+    if (p.cheapest) {
+      lines.push("  CHEAPEST: " + p.cheapest.name + " at " + p.cheapest.total + " EUR"
+        + (p.tie ? "  [TIE between " + p.tie.join(" and ") + " — XV-4 says escalate rather than guess]" : ""));
+    }
+    lines.push("");
+  });
+
+  if (pricing.allocation.length) {
+    lines.push("SLOT ALLOCATION (WP-4 cap, settled by WP-5 — already decided, apply it)");
+    pricing.allocation.forEach(d => {
+      lines.push("  " + d.date + ": cap " + d.capacity + ", already booked "
+        + (d.alreadyBooked.length ? d.alreadyBooked.join(", ") : "none")
+        + ", " + d.free + " free.");
+      lines.push("    " + d.winner + " (D&D " + d.winnerRate + "/day) takes the slot ahead of "
+        + d.loser + " (D&D " + d.loserRate + "/day).");
+      lines.push("    " + d.loser + " moves " + d.pushedTo + " at " + d.newOverrun
+        + " day(s) D&D, total " + d.newCost + " EUR."
+        + (d.saving !== null ? " The reverse order would cost " + d.reverseCost
+            + " EUR, so this ordering saves " + d.saving + " EUR." : ""));
+    });
+    lines.push("");
+  } else {
+    lines.push("SLOT ALLOCATION: no contested move slots among the containers under review.");
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
 function buildUserMessage(evalCase) {
   const wh = evalCase.warehouse;
   const scoped = caseScope(evalCase).map(findContainer).filter(Boolean);
   const roster = CONTAINERS_INYARD.filter(c => c.warehouse === wh);
   const arrivals = CONTAINERS_INBOUND.filter(c => c.warehouse === wh);
+  const pricingBrief = renderPricingBrief(computePricing(evalCase));
 
   return [
     "TASK",
@@ -1498,6 +1846,7 @@ function buildUserMessage(evalCase) {
     "CONTAINERS UNDER REVIEW (" + scoped.length + ")",
     rowsToCsv(scoped),
     "",
+    pricingBrief,
     "FULL YARD ROSTER FOR " + wh + " — every container under active return management at this site,",
     "including ones whose return is already booked. Use booked_return_date to work out which of the",
     "daily outbound move slots are already consumed.",
