@@ -135,6 +135,51 @@ It also hid most of the yard. Of the 16 containers on the roster, only 5 appear 
 
 Technically this required almost no new machinery. A warehouse's review is built as a synthetic case — `{ warehouse, scope_container_ids }` — the same shape `buildUserMessage()` and `computePricing()` already consumed for the five eval cases. `findAnyCase()` resolves either kind by id. The five documented cases still exist, still runnable, still exactly as rigorous — they just moved to the Evals tab, which is where a test harness belongs. Nothing downstream of case selection (the decision panel, the human gate, the run log) needed to change at all.
 
+## Designing so it survives scale
+
+The prototype runs two warehouses and sixteen containers. A real deployment is more like five warehouses at twenty to thirty each. The architecture should read as ready for that even while the data is small — and three things were not.
+
+### The cost basis was ambiguous
+
+The eval cases described cost one way and the pricing engine another:
+
+```text
+EV-03 expected:   "Recommends expedite at 100 EUR"        marginal
+Engine output:    "expedite = 500 + 100 = 600 EUR"        total
+```
+
+Both are defensible readings of `XV-2`, which is exactly the problem — anything comparing them, a person or an AI judge, would flag correct answers as failures. Now defined once, in a comment above `priceLevers()`, and used everywhere:
+
+```text
+total = drayage + premium + carrying cost
+```
+
+Drayage is included because the container leaves the yard under every option, so every option pays it. Being constant across levers it cannot change the ranking — and because it cancels in any comparison, **every "saves X EUR" claim in the eval set stayed correct** when the absolute figures moved to totals. Only three cells needed rewriting.
+
+### The allocator was wrong at scale, and nothing caught it
+
+The old implementation pushed each displaced container to the next weekday **without checking whether that day had capacity**, and without accounting for other containers displaced to the same day. At two containers with a cap of four, harmless. At thirty, it silently over-subscribed the following day and the day after — producing plans that were arithmetically correct and physically impossible.
+
+It is now a capacity-forward sequential allocation: walk days in order, place what fits by `WP-5.1` ranking, carry the overflow forward, re-check capacity on arrival, and restate a carried container's cost on every hop so it never holds two figures at once.
+
+`test/allocator-test.js` asserts the invariants that must hold for any valid plan, on generated yards up to 120 containers: no day over its `WP-4` cap, nobody placed twice, nothing scheduled before its vendor slot, `WP-5.1` never inverted, and every displaced cost matching the day it lands on.
+
+The old allocator **passes the 6-container case and fails 27 of those assertions** the moment the yard is realistic. It looked correct because nothing tested it at a size where it wasn't.
+
+### A flat list is not a workflow
+
+At six containers, listing them is fine. At 150 the operator cannot read every row, so the product's job stops being *display* and becomes *triage*. Every container now sorts into a lane, decided entirely by the pricing engine with no model call:
+
+| Lane | Contents | Review |
+|---|---|---|
+| **Needs you** | refusals, data conflicts, `XV-4` ties | individual, never batched |
+| **Confirm the pick** | engine priced it, one lever clearly cheapest | confirm rather than decide |
+| **Settled** | return already booked | collapsed |
+
+That split isn't a UI convenience — `WP-7` already draws exactly this line: *"Routine recommendations may be batch-approved. Anything carrying an escalation trigger from WP-6 requires individual review."* The policy anticipated the scale; the interface was behind it.
+
+Lanes cap their visible rows and collapse the tail into a count, so the left rail stays the same height at 6 containers or 60. And each warehouse header now leads with **euro exposure** rather than occupancy — occupancy is a warehouse statistic, exposure is what the operator is actually managing. Refused containers contribute nothing to that total, because the engine has no contractual basis to price them and inventing a figure to complete the header is the exact failure the refusal exists to prevent.
+
 ## The general lesson
 
 The reliable half of this agent was always the judgement half — spotting that data contradicts itself, recognising that a contracted carrier supplying an uncontracted unit type is still out of contract, and explaining why in language a person can check. Those are genuinely hard, and the model did them correctly on every run.

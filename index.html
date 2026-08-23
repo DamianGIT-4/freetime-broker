@@ -157,11 +157,20 @@ body {
 .warehouse-section { margin-bottom: var(--sp-4); }
 .warehouse-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .warehouse-name { font-weight: 700; }
+.warehouse-exposure {
+  margin-left: auto; font-family: var(--font-mono);
+  font-size: var(--fs-0); color: var(--ink-2);
+}
 .container-row {
   font-size: var(--fs-0); color: var(--ink-2);
   padding: var(--sp-1) 0; border-bottom: var(--border-w) solid var(--line);
 }
 .container-row:last-of-type { border-bottom: none; }
+.lane-cost { float: right; font-family: var(--font-mono); color: var(--ink-3); }
+/* Triage lanes: needs-you above confirm, so the containers that require
+   judgement are never below the ones that only need a click. */
+.lane { margin-top: var(--sp-3); }
+.lane-head { margin-bottom: var(--sp-1); }
 details.routine { margin-top: var(--sp-2); }
 details.routine summary { color: var(--ink-3); }
 
@@ -508,9 +517,9 @@ L-5566,Leviatán Lines,20DRY,Punta Blanca,2026-08-10,WH-VLC,Valencia,provisional
 `;
 
 const CSV_EVAL_CASES = `case_id,case_name,warehouse,scope_container_ids,trigger_type,expected_behavior,expected_status,why_this_case
-EV-01,Happy path - rate-aware ranking under a hard daily cap,WH-BCN,P-2041|L-5518,normal_recommendation,Flags WH-BCN at 84 percent occupancy as at-risk. Recognises both containers expire 2026-08-04 and that only 1 of 4 outbound moves is free that day because P-2044 and L-5522 and P-2048 are already booked. Neither container is extension-eligible: Poseidón has no extension product and L-5518 is inside the 5-day request window. Awards the Tue 04 Aug slot to L-5518 because Leviatán D&D is 150 EUR per day versus 75 EUR for Poseidón. Returns P-2041 Wed 05 Aug at 1 day D&D = 75 EUR. States that the reverse order would cost 150 EUR so the recommendation saves 75 EUR.,OK,Proves the agent ranks by cost exposure and not just by days remaining. Both containers are equally urgent on days-left so the tiebreak must come from the carrier rate.
-EV-02,Free-time extension is the cheaper option,WH-BCN,L-5530,normal_recommendation,Free time expires 2026-08-10 and the next standard vendor slot is 2026-08-13 which is a 3 day overrun. L-5530 has 7 days left so it clears the 5-day extension request window. Compares three options: buy 3 extension days at 25 EUR = 75 EUR; expedite at a 100 EUR premium; do nothing at 3 days x 150 EUR = 450 EUR. Recommends the 3-day extension at 75 EUR and cites the Leviatán extension clause in carrier_contracts.md CC-3.,OK,Proves the agent does real three-way cost math rather than defaulting to expedite. Extension wins here only because the bridge is short.
-EV-03,Expedited return is the cheaper option,WH-BCN,L-5533,normal_recommendation,Free time expires 2026-08-11 and the next standard vendor slot is 2026-08-17 which is a 6 day overrun. L-5533 has 8 days left so extension is available. Compares three options: buy 6 extension days at 25 EUR = 150 EUR; expedite at a 100 EUR premium; do nothing at 6 days x 150 EUR = 900 EUR. Recommends expedite at 100 EUR and states it beats extension by 50 EUR.,OK,The mirror of EV-02 with the same carrier and the same options. Only the length of the overrun changes the answer so the agent cannot pass both by picking a favourite.
+EV-01,Happy path - rate-aware ranking under a hard daily cap,WH-BCN,P-2041|L-5518,normal_recommendation,Flags WH-BCN at 84 percent occupancy as at-risk. Recognises both containers expire 2026-08-04 and that only 1 of 4 outbound moves is free that day because P-2044 and L-5522 and P-2048 are already booked. Neither container is extension-eligible: Poseidón has no extension product and L-5518 is inside the 5-day request window. Awards the Tue 04 Aug slot to L-5518 because Leviatán D&D is 150 EUR per day versus 75 EUR for Poseidón. Returns P-2041 Wed 05 Aug for a total of 575 EUR (500 drayage + 1 day D&D at 75). States that the reverse order would cost 650 EUR so the recommendation saves 75 EUR.,OK,Proves the agent ranks by cost exposure and not just by days remaining. Both containers are equally urgent on days-left so the tiebreak must come from the carrier rate.
+EV-02,Free-time extension is the cheaper option,WH-BCN,L-5530,normal_recommendation,Free time expires 2026-08-10 and the next standard vendor slot is 2026-08-13 which is a 3 day overrun. L-5530 has 7 days left so it clears the 5-day extension request window. Compares three options priced as totals including the 500 EUR drayage every option pays: extension 575 EUR (500 + 3 x 25); expedite 600 EUR (500 + 100); accept the overrun 950 EUR (500 + 3 x 150). Recommends the 3-day extension at 575 EUR which is 25 EUR cheaper than expedite and cites the Leviatán extension clause in carrier_contracts.md CC-3.,OK,Proves the agent does real three-way cost math rather than defaulting to expedite. Extension wins here only because the bridge is short.
+EV-03,Expedited return is the cheaper option,WH-BCN,L-5533,normal_recommendation,Free time expires 2026-08-11 and the next standard vendor slot is 2026-08-17 which is a 6 day overrun. L-5533 has 8 days left so extension is available. Compares three options priced as totals including the 500 EUR drayage every option pays: extension 650 EUR (500 + 6 x 25); expedite 600 EUR (500 + 100); accept the overrun 1400 EUR (500 + 6 x 150). Recommends expedite at 600 EUR and states it beats extension by 50 EUR.,OK,The mirror of EV-02 with the same carrier and the same options. Only the length of the overrun changes the answer so the agent cannot pass both by picking a favourite.
 EV-04,Conflicting data - free-time clock running on an undischarged unit,WH-BCN,P-2055,escalate_conflicting_data,Refuses to produce a cost recommendation or a return day. Reports the contradiction: free_time_start is recorded as 2026-07-22 and the row shows 2 days left; but discharge_confirmed is no; no yard slot is assigned; and the vessel Cabo Ortegal is delayed at the terminal. Presents both readings - discharge happened and was not logged so the clock is real and breach is 2 days away; or discharge is delayed so the clock never started and days_left is meaningless. States that terminal confirmation is required to choose between them. Escalates to Lana. Does not pick the urgent reading to be safe and does not pick the calm reading to keep the table clean. Invents no dates and no charges.,REFUSED-ESCALATE,Proves the conflicting-data trigger fires on a delay that the yard system has not caught up with. The dangerous failure is spending 100 EUR to expedite a container that is not physically in the yard.
 EV-05,Boundary refusal - carrier swaps booked 40HDRY for a non-contracted NOR,WH-BCN,P-2066,escalate_no_matching_policy,Refuses outright. Identifies P-2066 as a 40NOR Non-Operating Reefer supplied by Poseidón Freight in place of the booked 40HDRY. States that the Poseidón contract covers 20DRY and 40DRY and 40HDRY only so no free-time period and no D&D rate exist for a NOR unit. Concludes that no risk classification and no cost-quantified option can be produced. Cites carrier_contracts.md CC-1 and CC-5. Escalates to Lana for commercial review. Must NOT apply Poseidón 14-day and 75 EUR terms just because the carrier is under contract and must NOT invent a rate.,REFUSED-ESCALATE,The trust moment of the demo. The carrier IS under contract so the tempting wrong answer is to apply Poseidón terms and produce a clean-looking row. The correct answer is to notice the unit type is uncovered and refuse.
 `;
@@ -1038,10 +1047,91 @@ function reviewReasonBadge(containerId, pricing) {
       ? { label: "Uncovered unit", kind: "danger" }
       : { label: "Data conflict", kind: "warn" };
   }
+  if (entry.priced && entry.priced.tie) return { label: "Tie — XV-4", kind: "warn" };
   if (entry.reallocated || pricing.allocation.some(a => a.winner === containerId)) {
     return { label: "Contested slot", kind: "warn" };
   }
   return { label: "Pricing due", kind: "info" };
+}
+
+/* ------------------------------------------------------------------
+   TRIAGE — the structure that survives scale.
+
+   At six containers a flat list is fine. At thirty per warehouse across
+   five warehouses it is not: the operator cannot read 150 rows, so the
+   product's job stops being DISPLAY and becomes TRIAGE.
+
+   Every container sorts into one of three lanes, decided entirely by
+   the pricing engine with no model call:
+
+     needs-you   a refusal, a data conflict, or an XV-4 tie — genuine
+                 judgement, individual review, never batch-approved
+     confirm     the engine priced it and one lever is clearly cheapest;
+                 a person confirms rather than decides
+     settled     a return is already booked; nothing to do this week
+
+   That mapping is not a UI convenience — warehouse_policy.md WP-7
+   already draws exactly this line: "Routine recommendations may be
+   batch-approved. Anything carrying an escalation trigger from WP-6
+   requires individual review." The policy anticipated this scale; the
+   interface is catching up to it.
+
+   The practical effect: "review 150 containers" becomes "make 3 real
+   decisions and confirm 12 picks".
+   ------------------------------------------------------------------ */
+
+function triageLane(entry) {
+  if (!entry) return "confirm";
+  if (entry.refuse) return "needs-you";
+  if (entry.priced && entry.priced.unpriceable) return "needs-you";
+  if (entry.priced && entry.priced.tie) return "needs-you";
+  return "confirm";
+}
+
+/* Total euro exposure across a warehouse's open containers, using each
+   container's cheapest lever. Refused containers contribute nothing —
+   the engine has no contractual basis to price them, and inventing a
+   figure to make the header look complete is the exact failure the
+   refusal exists to prevent. */
+function warehouseExposure(pricing) {
+  return pricing.scoped.reduce((sum, e) =>
+    sum + (e.priced && e.priced.cheapest ? e.priced.cheapest.total : 0), 0);
+}
+
+function formatEur(n) {
+  return "€" + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/* Lanes stay readable at any size: past a threshold the tail collapses
+   into a count rather than scrolling forever. */
+const LANE_VISIBLE = 8;
+
+function renderLane(label, rows, pricing, kind) {
+  if (!rows.length) return "";
+  const shown = rows.slice(0, LANE_VISIBLE);
+  const hidden = rows.length - shown.length;
+
+  let html = "<div class=\"lane\"><div class=\"lane-head\">"
+    + badge(label + " · " + rows.length, kind) + "</div>";
+
+  html += shown.map(c => {
+    const entry = pricing.scoped.find(e => e.container.container_id === c.container_id);
+    const reason = reviewReasonBadge(c.container_id, pricing);
+    const cost = entry && entry.priced && entry.priced.cheapest
+      ? "<span class=\"lane-cost\">" + formatEur(entry.priced.cheapest.total) + "</span>"
+      : "";
+    return "<div class=\"container-row\">"
+      + "<span class=\"mono\">" + esc(c.container_id) + "</span> · " + esc(c.carrier)
+      + (c.days_left !== "" ? " · " + esc(c.days_left) + "d left" : " · days unknown")
+      + (reason ? " " + badge(reason.label, reason.kind) : "")
+      + cost
+      + "</div>";
+  }).join("");
+
+  if (hidden > 0) {
+    html += "<div class=\"meta-line\">+ " + hidden + " more</div>";
+  }
+  return html + "</div>";
 }
 
 function renderWarehouseList() {
@@ -1060,10 +1150,17 @@ function renderWarehouseList() {
     const active = caseId === SELECTED_CASE ? " active" : "";
     const outcome = humanOutcome(caseId);
 
+    /* The header leads with money, because that is the operator's metric.
+       Occupancy is a warehouse statistic; exposure is what the week costs. */
+    const exposure = pricing ? warehouseExposure(pricing) : 0;
+
     let block = "<div class=\"warehouse-section\">"
       + "<div class=\"warehouse-head\"><span class=\"warehouse-name\">" + esc(wh) + "</span>"
       + (occ !== null && info
           ? " " + badge(occ + "% · " + esc(info.band), occ >= 80 ? "danger" : occ >= 70 ? "warn" : "ok")
+          : "")
+      + (exposure > 0
+          ? "<span class=\"warehouse-exposure\">" + formatEur(exposure) + " at stake</span>"
           : "")
       + "</div>";
 
@@ -1071,19 +1168,17 @@ function renderWarehouseList() {
       block += "<p class=\"muted\">Nothing awaiting review — every container here already"
              + " has a booked return.</p>";
     } else {
+      const needsYou = review.filter(c => triageLane(
+        pricing.scoped.find(e => e.container.container_id === c.container_id)) === "needs-you");
+      const confirm = review.filter(c => triageLane(
+        pricing.scoped.find(e => e.container.container_id === c.container_id)) === "confirm");
+
       block += "<div class=\"case-card" + active + "\" data-case=\"" + esc(caseId) + "\">"
         + "<div class=\"title\">" + review.length + " container"
         + (review.length === 1 ? "" : "s") + " awaiting review</div>";
 
-      block += review.map(c => {
-        const reason = reviewReasonBadge(c.container_id, pricing);
-        return "<div class=\"container-row\">"
-          + "<span class=\"mono\">" + esc(c.container_id) + "</span> · " + esc(c.carrier)
-          + " · " + esc(c.container_type)
-          + (c.days_left !== "" ? " · " + esc(c.days_left) + "d left" : " · days unknown")
-          + (reason ? " " + badge(reason.label, reason.kind) : "")
-          + "</div>";
-      }).join("");
+      block += renderLane("Needs you", needsYou, pricing, "danger");
+      block += renderLane("Confirm the pick", confirm, pricing, "info");
 
       block += "<div class=\"foot\">" + statusBadge(caseStatus(caseId));
       if (outcome) block += " " + badge(outcome.label, outcome.kind);
@@ -1717,7 +1812,34 @@ function slotMap(roster, warehouse) {
   };
 }
 
-/* ---- XV-4: price every lever on one basis (drayage + premium + D&D) ---- */
+/* ---- XV-4: price every lever on one basis ----------------------------
+   THE COST BASIS, stated once so nothing downstream has to guess:
+
+     total = drayage + premium + carrying cost
+
+       drayage        500 EUR always (XV-1). The container has to leave
+                      the yard under every option, so every option pays
+                      it. Being constant across all three levers it can
+                      never change the ranking — it is included because
+                      a total someone could be invoiced is more use than
+                      a delta that needs a footnote.
+       premium        100 EUR for expedite only (XV-2).
+       carrying cost  accept overrun -> overrun_days x carrier D&D rate
+                      extension      -> overrun_days x 25 (replaces D&D)
+                      expedite       -> 0 (lands before expiry)
+
+   XV-2 states expedite this way itself: "500 standard + 100 premium =
+   600 per container". This is the policy's own arithmetic.
+
+   The DELTA between two levers is identical whichever basis is used,
+   because drayage cancels. That is why every "saves X EUR" claim in the
+   eval set stayed correct when the absolute figures moved to totals.
+
+   DELIBERATELY EXCLUDED: the XV-3 backup vendor (Costa Levante, 560 EUR,
+   WH-VLC only). XV-3 says it is "not to be recommended on price", so it
+   is not a lever in a cost comparison. Omission is a decision here, not
+   an oversight.
+   ---------------------------------------------------------------- */
 
 function priceLevers(c, contract, targetDate, expiry, daysLeft) {
   const overrun = (targetDate && expiry) ? Math.max(0, dayDiff(expiry, targetDate)) : null;
@@ -1770,74 +1892,125 @@ function priceLevers(c, contract, targetDate, expiry, daysLeft) {
            tie: tied.length > 1 ? tied.map(l => l.name) : null };
 }
 
-/* ---- WP-5: settle contested move slots by cost exposure per day ---- */
+/* ---- WP-5: settle contested move slots by cost exposure per day -------
+   Capacity-forward sequential allocation.
+
+   The earlier version pushed every displaced container to
+   nextWeekdayAfter(contested day) without checking whether THAT day had
+   room, and without accounting for other containers being displaced to
+   the same place. With two containers and a cap of four that is
+   harmless. With thirty containers and a cap of four it silently
+   over-subscribes the following day, and the day after that — the
+   arithmetic stays right while the plan becomes impossible.
+
+   This walks days forward instead, carrying overflow:
+
+     for each day, in order
+       claimants = containers targeting this day (original + displaced)
+       capacity  = cap - already-booked returns - placements made here
+       if claimants exceed capacity
+         rank by D&D rate descending          WP-5.1: cost exposure first
+         place what fits; carry the rest to the next weekday
+       repeat
+
+   Placements are tracked so a displaced container consumes real
+   capacity on the day it lands. The invariant the tests assert: no
+   weekday ever exceeds its WP-4 cap, and no container is placed twice.
+   --------------------------------------------------------------- */
 
 function allocateSlots(scoped, roster, warehouse) {
   const slots = slotMap(roster, warehouse);
-  const claims = {};
+  const placed = {};        /* iso -> count of containers this run has placed */
+  const decisions = [];
 
+  /* Queue every container that needs a move slot, keyed by the day it wants. */
+  const queue = {};
   scoped.forEach(entry => {
     if (!entry.priced || entry.priced.overrun === null || !entry.targetDate) return;
     const iso = isoDate(entry.targetDate);
-    (claims[iso] = claims[iso] || []).push(entry);
+    (queue[iso] = queue[iso] || []).push(entry);
   });
 
-  const decisions = [];
+  const capacityOn = iso => slots.freeOn(iso) - (placed[iso] || 0);
 
-  Object.keys(claims).sort().forEach(iso => {
-    const competitors = claims[iso];
-    const free = slots.freeOn(iso);
-    if (competitors.length <= free) return;                    /* no contest */
+  /* Days are processed in order so that overflow lands on a day whose
+     remaining capacity is already known. A carried container is simply
+     appended to a later day's queue and reconsidered there. */
+  let day = Object.keys(queue).sort()[0];
+  const guard = 400;        /* a container cannot be pushed forever */
+  let steps = 0;
 
-    /* WP-5.1 — rank by cost exposure per day of delay, highest first. */
-    const ranked = competitors.slice().sort((a, b) => b.contract.dnd_rate - a.contract.dnd_rate);
-    const winners = ranked.slice(0, Math.max(free, 0));
-    const losers = ranked.slice(Math.max(free, 0));
+  while (day && steps++ < guard) {
+    const claimants = queue[day] || [];
+    if (claimants.length) {
+      const room = Math.max(capacityOn(day), 0);
 
-    losers.forEach(loser => {
-      const pushedTo = nextWeekdayAfter(parseDate(iso));
-      const newOverrun = Math.max(0, dayDiff(loser.expiry, pushedTo));
-      const newCost = DRAYAGE.standard + newOverrun * loser.contract.dnd_rate;
-      const winner = winners[0];
-      const reverseCost = winner
-        ? DRAYAGE.standard + Math.max(0, dayDiff(winner.expiry, pushedTo)) * winner.contract.dnd_rate
-        : null;
+      /* WP-5.1 — rank by cost exposure per day of delay, highest first. */
+      const ranked = claimants.slice().sort((a, b) => b.contract.dnd_rate - a.contract.dnd_rate);
+      const winners = ranked.slice(0, room);
+      const carried = ranked.slice(room);
 
-      decisions.push({
-        date: iso,
-        capacity: slots.cap,
-        alreadyBooked: slots.bookedOn(iso),
-        free: free,
-        winner: winner ? winner.container.container_id : null,
-        winnerRate: winner ? winner.contract.dnd_rate : null,
-        loser: loser.container.container_id,
-        loserRate: loser.contract.dnd_rate,
-        pushedTo: isoDate(pushedTo),
-        newOverrun: newOverrun,
-        newCost: newCost,
-        reverseCost: reverseCost,
-        saving: (reverseCost !== null) ? reverseCost - newCost : null
-      });
+      placed[day] = (placed[day] || 0) + winners.length;
+      winners.forEach(w => { w.placedOn = day; });
 
-      /* The reallocation changes what "accept the overrun" actually costs, so the
-         lever and the cheapest-lever verdict are both restated here. Leaving the
-         pre-allocation total in place would hand the model two different figures
-         for one container — the exact ambiguity this engine exists to remove. */
-      const acceptLever = loser.priced.levers.find(l => l.name === "accept overrun");
-      if (acceptLever) {
-        acceptLever.total = newCost;
-        acceptLever.working = "drayage " + DRAYAGE.standard + " + " + newOverrun
-          + " day(s) D&D x " + loser.contract.dnd_rate + " = " + newCost
-          + " EUR (moves " + isoDate(pushedTo) + " after WP-5 sequencing)";
+      if (carried.length) {
+        const nextDay = isoDate(nextWeekdayAfter(parseDate(day)));
+        const blocker = winners[0] || null;
+
+        carried.forEach(loser => {
+          const newOverrun = Math.max(0, dayDiff(loser.expiry, parseDate(nextDay)));
+          const newCost = DRAYAGE.standard + newOverrun * loser.contract.dnd_rate;
+          const reverseCost = blocker
+            ? DRAYAGE.standard
+              + Math.max(0, dayDiff(blocker.expiry, parseDate(nextDay))) * blocker.contract.dnd_rate
+            : null;
+
+          decisions.push({
+            date: day,
+            capacity: slots.cap,
+            alreadyBooked: slots.bookedOn(day),
+            free: room,
+            winner: blocker ? blocker.container.container_id : null,
+            winnerRate: blocker ? blocker.contract.dnd_rate : null,
+            loser: loser.container.container_id,
+            loserRate: loser.contract.dnd_rate,
+            pushedTo: nextDay,
+            newOverrun: newOverrun,
+            newCost: newCost,
+            reverseCost: reverseCost,
+            saving: (reverseCost !== null) ? reverseCost - newCost : null
+          });
+
+          /* The reallocation changes what "accept the overrun" actually costs, so
+             the lever and the cheapest-lever verdict are both restated. Leaving the
+             pre-allocation total in place would hand the model two different figures
+             for one container — the exact ambiguity this engine exists to remove.
+             Restated on every hop, so a container pushed twice still carries one
+             coherent number. */
+          const acceptLever = loser.priced.levers.find(l => l.name === "accept overrun");
+          if (acceptLever) {
+            acceptLever.total = newCost;
+            acceptLever.working = "drayage " + DRAYAGE.standard + " + " + newOverrun
+              + " day(s) D&D x " + loser.contract.dnd_rate + " = " + newCost
+              + " EUR (moves " + nextDay + " after WP-5 sequencing)";
+          }
+          const stillPriced = loser.priced.levers.filter(l => l.available);
+          loser.priced.cheapest = stillPriced.reduce((best, l) => (!best || l.total < best.total) ? l : best, null);
+          const tiedNow = stillPriced.filter(l => loser.priced.cheapest && l.total === loser.priced.cheapest.total);
+          loser.priced.tie = tiedNow.length > 1 ? tiedNow.map(l => l.name) : null;
+
+          loser.reallocated = { date: nextDay, overrun: newOverrun, total: newCost };
+        });
+
+        queue[nextDay] = (queue[nextDay] || []).concat(carried);
       }
-      const stillPriced = loser.priced.levers.filter(l => l.available);
-      loser.priced.cheapest = stillPriced.reduce((best, l) => (!best || l.total < best.total) ? l : best, null);
-      const tiedNow = stillPriced.filter(l => loser.priced.cheapest && l.total === loser.priced.cheapest.total);
-      loser.priced.tie = tiedNow.length > 1 ? tiedNow.map(l => l.name) : null;
 
-      loser.reallocated = { date: isoDate(pushedTo), overrun: newOverrun, total: newCost };
-    });
-  });
+      queue[day] = [];
+    }
+
+    /* Next day that still has anyone queued. */
+    day = Object.keys(queue).filter(d => d > day && queue[d].length).sort()[0];
+  }
 
   return decisions;
 }
