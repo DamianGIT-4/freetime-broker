@@ -28,6 +28,12 @@
      node test/eval-runner.js --runs 20
      node test/eval-runner.js --case EV-03 --runs 30
      node test/eval-runner.js --dry-run      (build the request, call nothing)
+
+     node test/eval-runner.js --rescore evals/runs/2026-08-23T12-57-15.json
+       Re-grades transcripts already on disk against the CURRENT checkRun(),
+       with no new API calls. Use this after adding or tightening a check —
+       otherwise an old sweep's recorded rate silently reflects a weaker
+       checker than the one a reader assumes produced it.
    ===================================================================== */
 
 const fs = require("fs");
@@ -48,6 +54,7 @@ const ONLY_CASE   = arg("case", null);
 const MODEL       = arg("model", null);          /* default comes from index.html */
 const CONCURRENCY = Number(arg("concurrency", 3));
 const DRY_RUN     = FLAG("dry-run");
+const RESCORE     = arg("rescore", null);       /* path to an evals/runs/*.json to re-grade */
 const SOURCE      = arg("source", path.join(__dirname, "..", "index.html"));
 
 const REPO = path.join(__dirname, "..");
@@ -178,6 +185,25 @@ function checkRun(evalCase, pricing, parsed) {
   const sawRefusal = parsed.blocks.some(b => b._status === "REFUSED-ESCALATE");
   add("case status = " + expected, anyRefusalExpected === sawRefusal,
       "expected " + expected + ", saw " + (sawRefusal ? "a refusal" : "no refusal"));
+
+  /* WAREHOUSE SUMMARY's exposure figure is free text — nothing constrains it
+     to agree with the per-container totals the engine actually computed.
+     Found by inspection: on a real EV-03 sweep, 4 of 5 runs stated 800 EUR
+     while every RECOMMENDATION correctly said 600. The mechanical checks
+     above only look inside each container's own block, so that run still
+     passed 5/5 clean. Checked here: the summary's total should equal the
+     sum of the engine's cheapest lever across every non-refused container
+     in scope — a number the model never had to compute itself, since it
+     was handed the pieces in the pricing brief. */
+  const engineExposure = pricing.scoped.reduce((sum, e) =>
+    sum + (!e.refuse && e.priced && e.priced.cheapest ? e.priced.cheapest.total : 0), 0);
+  if (engineExposure > 0) {
+    const summaryEuros = eurosIn(parsed.summary);
+    add("WAREHOUSE SUMMARY exposure matches engine total (" + engineExposure + ")",
+        summaryEuros.indexOf(engineExposure) !== -1,
+        "summary had " + (summaryEuros.join(", ") || "no figure") + " — \""
+        + (parsed.summary || "").slice(0, 140) + "\"");
+  }
 
   return { checks, passed: checks.every(c => c.ok) };
 }
@@ -371,6 +397,145 @@ function writeReport(repo, latest, historyPath, record) {
   fs.writeFileSync(path.join(repo, "evals", "report.html"), html);
 }
 
+/* ---------------- finalize a sweep --------------------------------------
+   Everything after "the transcripts exist" is shared between two paths:
+   a live sweep that just called the API, and --rescore, which re-grades
+   transcripts already on disk against a checker that has since improved
+   (see the --rescore flag below). Both end up with the same shape —
+   { record, summary, outFile } — and this is what turns that into the
+   committed evidence: latest.json, history.jsonl, the report, RESULTS.md.
+
+   history.jsonl is upserted by sweep_id rather than blindly appended, so
+   re-running --rescore on the same evidence updates its one line instead
+   of duplicating it. A live sweep always has a fresh stamp, so for that
+   path this is equivalent to appending.
+   ------------------------------------------------------------------- */
+
+function finalizeSweep(ctx) {
+  const { repo, record, summary, outFile, runs, modelId, started, rescored } = ctx;
+  const stamp = path.basename(outFile, ".json");
+
+  console.log("\n" + "-".repeat(58));
+  console.log("  case    rate     mechanical checks");
+  console.log("-".repeat(58));
+  summary.forEach(s => console.log("  " + s.id.padEnd(8) + (s.rate + "%").padEnd(9) +
+    s.passes + "/" + runs + " runs clean"));
+  console.log("-".repeat(58));
+
+  /* ---- latest.json — what the product's Evals tab reads ----------------
+     Deliberately WITHOUT the raw transcripts: the page needs rates and
+     provenance, not several megabytes of model output. The transcripts
+     stay in evals/runs/ where the report and a human can reach them. */
+  const latest = {
+    started: record.started, model: record.model, git_sha: record.git_sha,
+    runs_per_case: record.runs_per_case, source: path.relative(repo, outFile),
+    rescored: !!rescored, cases: {}
+  };
+  Object.keys(record.cases).forEach(id => {
+    const c = record.cases[id];
+    latest.cases[id] = {
+      name: c.name, passes: c.passes, runs: c.runs,
+      mechanical_rate: c.mechanical_rate, top_failure: c.top_failure,
+      verdict: c.verdict, note: c.note
+    };
+  });
+  const latestPath = path.join(repo, "evals", "latest.json");
+  fs.writeFileSync(latestPath, JSON.stringify(latest, null, 2));
+
+  /* ---- history.jsonl — memory across sweeps ---------------------------
+     One line per sweep, each tied to the commit that produced it. This is
+     what makes "EV-03 went 12% -> 94%" a claim about a specific change
+     rather than a number with no cause. Upserted by sweep_id: a rescore
+     of existing evidence corrects its own line rather than adding one. */
+  const historyPath = path.join(repo, "evals", "history.jsonl");
+  let lines = [];
+  try { lines = fs.readFileSync(historyPath, "utf8").trim().split("\n").filter(Boolean); }
+  catch (e) { /* no history yet */ }
+
+  const newLine = {
+    sweep_id: stamp, started: record.started, git_sha: record.git_sha,
+    model: record.model, runs_per_case: runs,
+    rates: summary.reduce((acc, s) => { acc[s.id] = s.passes / runs; return acc; }, {}),
+    source: path.relative(repo, outFile), rescored: !!rescored
+  };
+
+  let replaced = false;
+  lines = lines.map(l => {
+    let parsed;
+    try { parsed = JSON.parse(l); } catch (e) { return l; }
+    if (parsed.sweep_id === stamp) { replaced = true; return JSON.stringify(newLine); }
+    return l;
+  });
+  if (!replaced) lines.push(JSON.stringify(newLine));
+  fs.writeFileSync(historyPath, lines.join("\n") + "\n");
+
+  /* ---- previous sweep, for the delta ---- */
+  const priorLines = lines.filter(l => {
+    try { return JSON.parse(l).sweep_id !== stamp; } catch (e) { return false; }
+  });
+  const previous = priorLines.length ? JSON.parse(priorLines[priorLines.length - 1]) : null;
+
+  if (rescored) {
+    console.log("\nRe-scored " + path.relative(repo, outFile) + " against the current checker" +
+      " (no API calls made).");
+  }
+  if (previous) {
+    console.log("\nAgainst the previous sweep (" + (previous.git_sha || "unknown commit") + "):");
+    summary.forEach(s => {
+      const before = previous.rates && previous.rates[s.id];
+      if (typeof before !== "number") return;
+      const delta = Math.round((s.passes / runs - before) * 100);
+      const arrow = delta > 0 ? "up " + delta : delta < 0 ? "down " + Math.abs(delta) : "unchanged";
+      console.log("  " + s.id.padEnd(8) + Math.round(before * 100) + "% -> " + s.rate + "%  " + arrow);
+    });
+  }
+
+  writeReport(repo, latest, historyPath, record);
+
+  /* ---- results stub for the human verdicts ---- */
+  const resultsPath = path.join(repo, "evals", "RESULTS.md");
+  const block = [
+    "## Sweep " + started.toISOString().slice(0, 10) + " · " + modelId + " · " + runs + " runs per case"
+      + (rescored ? " · re-scored" : ""),
+    "",
+    (record.git_sha ? "Commit `" + record.git_sha + "`. " : "")
+      + "Mechanical pass rate is checked automatically against the pricing engine.",
+    "The verdict column is a human judgement of the explanation and is filled in by hand.",
+    "",
+    "| Case | Mechanical | Verdict | Note |",
+    "|---|---|---|---|",
+    ...summary.map(s => "| " + s.id + " | " + s.rate + "% (" + s.passes + "/" + runs + ") | | |"),
+    "",
+    "Raw outputs: `" + path.relative(repo, outFile) + "`",
+    ""
+  ].join("\n");
+
+  let existing = "";
+  if (fs.existsSync(resultsPath)) {
+    existing = fs.readFileSync(resultsPath, "utf8");
+  } else {
+    existing = [
+      "# Eval results",
+      "",
+      "Newest sweep first. Mechanical pass rates are produced by `test/eval-runner.js`",
+      "and check only what the pricing engine can independently prove. The Verdict",
+      "column is a human judgement of whether the explanation is any good — the tool",
+      "does not score prose, and the console never scores itself.",
+      ""
+    ].join("\n");
+  }
+  const marker = "\n## Sweep ";
+  const head = existing.indexOf(marker) === -1 ? existing : existing.slice(0, existing.indexOf(marker) + 1);
+  const tail = existing.indexOf(marker) === -1 ? "" : existing.slice(existing.indexOf(marker) + 1);
+  fs.writeFileSync(resultsPath, head + "\n" + block + "\n" + tail);
+
+  console.log("\nWritten:");
+  console.log("  evals/latest.json      <- the product's Evals tab reads this");
+  console.log("  evals/history.jsonl    <- one line per sweep, tied to a commit");
+  console.log("  evals/report.html      <- open this to review");
+  console.log("  evals/RESULTS.md       <- verdict column is yours to fill in");
+}
+
 /* ---------------- self-test ----------------
    Proves the checks above actually catch the failure they were written
    for, by replaying the recorded EV-03 bug: every figure correct, the
@@ -450,6 +615,65 @@ function selfTest() {
 
 (async function main() {
   if (FLAG("self-test")) { process.exit(selfTest() ? 0 : 1); }
+
+  if (RESCORE) {
+    const inFile = path.isAbsolute(RESCORE) ? RESCORE : path.join(REPO, RESCORE);
+    if (!fs.existsSync(inFile)) {
+      console.error("No such file: " + inFile);
+      process.exit(2);
+    }
+    const old = JSON.parse(fs.readFileSync(inFile, "utf8"));
+    console.log("Re-scoring " + path.relative(REPO, inFile)
+      + " (commit " + (old.git_sha || "unknown") + ", " + old.model + ")\n");
+
+    const summary = [];
+    const record = { started: old.started, model: old.model,
+                      runs_per_case: old.runs_per_case, git_sha: old.git_sha, cases: {} };
+
+    Object.keys(old.cases).forEach(id => {
+      const evalCase = API.EVAL_CASES.find(c => c.case_id === id);
+      if (!evalCase) { console.log(id + ": no longer a known case, skipping"); return; }
+
+      const pricing = API.computePricing(evalCase);
+      const oldCase = old.cases[id];
+      const raw = oldCase.raw || [];
+      const runs = raw.length;
+
+      const results = raw.map(r => {
+        if (!r.text) return { ok: false, passed: false };
+        const parsed = API.parseAgentOutput(r.text);
+        const verdict = checkRun(evalCase, pricing, parsed);
+        return { ok: true, passed: verdict.passed, checks: verdict.checks, text: r.text, usage: r.usage };
+      });
+
+      const passes = results.filter(r => r.passed).length;
+      const rate = runs ? Math.round((passes / runs) * 100) : 0;
+      const wasRate = oldCase.rate != null ? oldCase.rate
+        : Math.round((oldCase.mechanical_rate || 0) * 100);
+
+      const failCounts = {};
+      results.filter(r => r.ok && !r.passed).forEach(r =>
+        r.checks.filter(c => !c.ok).forEach(c => { failCounts[c.name] = (failCounts[c.name] || 0) + 1; }));
+      const worst = Object.entries(failCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      const topFailure = worst.length ? worst[0][0] : null;
+
+      const changed = rate !== wasRate ? "  (was " + wasRate + "%)" : "  (unchanged)";
+      console.log("  " + id.padEnd(8) + passes + "/" + runs + "  " + rate + "%" + changed);
+      worst.forEach(([name, n]) => console.log("        " + n + "x  " + name));
+
+      summary.push({ id, name: evalCase.case_name, passes, rate, errored: 0, worst });
+      record.cases[id] = {
+        name: evalCase.case_name, expected_status: evalCase.expected_status,
+        passes, runs, rate, mechanical_rate: runs ? passes / runs : 0, top_failure: topFailure,
+        verdict: oldCase.verdict || "", note: oldCase.note || "",
+        failures: failCounts, raw
+      };
+    });
+
+    finalizeSweep({ repo: REPO, record, summary, outFile: inFile, runs: record.runs_per_case,
+                     modelId: record.model, started: new Date(record.started), rescored: true });
+    return;
+  }
 
   const cases = API.EVAL_CASES.filter(c => !ONLY_CASE || c.case_id === ONLY_CASE);
   if (!cases.length) {
@@ -553,114 +777,15 @@ function selfTest() {
     };
   }
 
-  /* ---- write the evidence ---- */
+  /* ---- write the raw evidence: what the API actually said ---- */
   fs.mkdirSync(RUNS_DIR, { recursive: true });
   const stamp = started.toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const outFile = path.join(RUNS_DIR, stamp + ".json");
   fs.writeFileSync(outFile, JSON.stringify(record, null, 2));
-
-  console.log("\n" + "-".repeat(58));
-  console.log("  case    rate     mechanical checks");
-  console.log("-".repeat(58));
-  summary.forEach(s => console.log("  " + s.id.padEnd(8) + (s.rate + "%").padEnd(9) +
-    s.passes + "/" + RUNS + " runs clean"));
-  console.log("-".repeat(58));
   console.log("\nRaw outputs: " + path.relative(REPO, outFile));
 
-  /* ---- latest.json — what the product's Evals tab reads ----------------
-     Deliberately WITHOUT the raw transcripts: the page needs rates and
-     provenance, not several megabytes of model output. The transcripts
-     stay in evals/runs/ where the report and a human can reach them. */
-  const latest = {
-    started: record.started, model: record.model, git_sha: record.git_sha,
-    runs_per_case: record.runs_per_case, source: path.relative(REPO, outFile),
-    cases: {}
-  };
-  Object.keys(record.cases).forEach(id => {
-    const c = record.cases[id];
-    latest.cases[id] = {
-      name: c.name, passes: c.passes, runs: c.runs,
-      mechanical_rate: c.mechanical_rate, top_failure: c.top_failure,
-      verdict: c.verdict, note: c.note
-    };
-  });
-  const latestPath = path.join(REPO, "evals", "latest.json");
-  fs.writeFileSync(latestPath, JSON.stringify(latest, null, 2));
-
-  /* ---- history.jsonl — memory across sweeps ---------------------------
-     Append-only, one line per sweep, each tied to the commit that
-     produced it. This is what makes "EV-03 went 12% -> 94%" a claim about
-     a specific change rather than a number with no cause. */
-  const historyPath = path.join(REPO, "evals", "history.jsonl");
-  const historyLine = JSON.stringify({
-    sweep_id: stamp, started: record.started, git_sha: record.git_sha,
-    model: record.model, runs_per_case: RUNS,
-    rates: summary.reduce((acc, s) => { acc[s.id] = s.passes / RUNS; return acc; }, {}),
-    source: path.relative(REPO, outFile)
-  });
-  fs.appendFileSync(historyPath, historyLine + "\n");
-
-  /* ---- previous sweep, for the delta ---- */
-  let previous = null;
-  try {
-    const lines = fs.readFileSync(historyPath, "utf8").trim().split("\n").filter(Boolean);
-    if (lines.length > 1) previous = JSON.parse(lines[lines.length - 2]);
-  } catch (e) { /* first sweep */ }
-
-  if (previous) {
-    console.log("\nAgainst the previous sweep (" + (previous.git_sha || "unknown commit") + "):");
-    summary.forEach(s => {
-      const before = previous.rates && previous.rates[s.id];
-      if (typeof before !== "number") return;
-      const delta = Math.round((s.passes / RUNS - before) * 100);
-      const arrow = delta > 0 ? "up " + delta : delta < 0 ? "down " + Math.abs(delta) : "unchanged";
-      console.log("  " + s.id.padEnd(8) + Math.round(before * 100) + "% -> " + s.rate + "%  " + arrow);
-    });
-  }
-
-  writeReport(REPO, latest, historyPath, record);
-
-  /* ---- results stub for the human verdicts ---- */
-  const resultsPath = path.join(REPO, "evals", "RESULTS.md");
-  const block = [
-    "## Sweep " + started.toISOString().slice(0, 10) + " · " + MODEL_ID + " · " + RUNS + " runs per case",
-    "",
-    (record.git_sha ? "Commit `" + record.git_sha + "`. " : "")
-      + "Mechanical pass rate is checked automatically against the pricing engine.",
-    "The verdict column is a human judgement of the explanation and is filled in by hand.",
-    "",
-    "| Case | Mechanical | Verdict | Note |",
-    "|---|---|---|---|",
-    ...summary.map(s => "| " + s.id + " | " + s.rate + "% (" + s.passes + "/" + RUNS + ") | | |"),
-    "",
-    "Raw outputs: `" + path.relative(REPO, outFile) + "`",
-    ""
-  ].join("\n");
-
-  let existing = "";
-  if (fs.existsSync(resultsPath)) {
-    existing = fs.readFileSync(resultsPath, "utf8");
-  } else {
-    existing = [
-      "# Eval results",
-      "",
-      "Newest sweep first. Mechanical pass rates are produced by `test/eval-runner.js`",
-      "and check only what the pricing engine can independently prove. The Verdict",
-      "column is a human judgement of whether the explanation is any good — the tool",
-      "does not score prose, and the console never scores itself.",
-      ""
-    ].join("\n");
-  }
-  const marker = "\n## Sweep ";
-  const head = existing.indexOf(marker) === -1 ? existing : existing.slice(0, existing.indexOf(marker) + 1);
-  const tail = existing.indexOf(marker) === -1 ? "" : existing.slice(existing.indexOf(marker) + 1);
-  fs.writeFileSync(resultsPath, head + "\n" + block + "\n" + tail);
-
-  console.log("\nWritten:");
-  console.log("  evals/latest.json      <- the product's Evals tab reads this");
-  console.log("  evals/history.jsonl    <- one line per sweep, tied to a commit");
-  console.log("  evals/report.html      <- open this to review");
-  console.log("  evals/RESULTS.md       <- verdict column is yours to fill in");
+  finalizeSweep({ repo: REPO, record, summary, outFile, runs: RUNS,
+                   modelId: MODEL_ID, started, rescored: false });
 })().catch(err => {
   console.error("\n" + err.stack || err);
   process.exit(1);

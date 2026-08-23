@@ -1,0 +1,1 @@
+{"sweep_id":"2026-08-23T12-57-15","started":"2026-08-23T12:57:15.225Z","git_sha":"9a238b4","model":"claude-sonnet-4-5","runs_per_case":5,"rates":{"EV-03":0.2},"source":"evals/runs/2026-08-23T12-57-15.json","rescored":true}

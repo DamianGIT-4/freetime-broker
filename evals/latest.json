@@ -1,0 +1,19 @@
+{
+  "started": "2026-08-23T12:57:15.225Z",
+  "model": "claude-sonnet-4-5",
+  "git_sha": "9a238b4",
+  "runs_per_case": 5,
+  "source": "evals/runs/2026-08-23T12-57-15.json",
+  "rescored": true,
+  "cases": {
+    "EV-03": {
+      "name": "Expedited return is the cheaper option",
+      "passes": 1,
+      "runs": 5,
+      "mechanical_rate": 0.2,
+      "top_failure": "WAREHOUSE SUMMARY exposure matches engine total (600)",
+      "verdict": "",
+      "note": ""
+    }
+  }
+}

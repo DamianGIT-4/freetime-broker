@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Freetime Broker — eval report</title>
+<style>
+:root{color-scheme:dark;--bg:#0d1117;--card:#161b22;--line:#30363d;--ink:#e6edf3;
+--ink2:#9aa6b2;--ok:#3fb950;--warn:#d29922;--bad:#f85149}
+body{margin:0;padding:32px;background:var(--bg);color:var(--ink);
+font:14px/1.55 ui-sans-serif,-apple-system,Segoe UI,Roboto,sans-serif}
+h1{font-size:20px;margin:0 0 4px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:32px 0 10px}
+.meta{color:var(--ink2);font-size:13px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-top:12px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+color:var(--ink2);font-weight:600;padding:6px 10px 6px 0}
+td{padding:10px 10px 10px 0;border-top:1px solid var(--line);vertical-align:top}
+.sub{color:var(--ink2);font-size:12px;margin-top:2px}
+.rate{min-width:190px}
+.track{display:inline-block;width:130px;height:8px;border-radius:99px;background:#21262d;
+overflow:hidden;vertical-align:middle}
+.fill{display:block;height:100%}
+.fill.ok{background:var(--ok)}.fill.warn{background:var(--warn)}.fill.bad{background:var(--bad)}
+.num{margin-left:8px;font-family:ui-monospace,monospace}
+.up{color:var(--ok)}.down{color:var(--bad)}.flat{color:var(--ink2)}.fail{color:var(--warn)}
+.spark{white-space:nowrap}
+.spark i{display:inline-block;width:5px;margin-right:2px;background:#3b82f6;border-radius:1px;vertical-align:bottom}
+.pill{display:inline-block;padding:1px 7px;border-radius:99px;background:#21262d;
+color:var(--ink2);font-size:12px;font-family:ui-monospace,monospace}
+.note{color:var(--ink2);font-size:13px;border-left:2px solid var(--line);padding-left:12px;margin-top:16px}
+</style>
+<h1>Freetime Broker — eval report</h1>
+<p class="meta">Sweep 2026-08-23 12:57 · claude-sonnet-4-5 · 5 runs per case · commit <span class="mono">9a238b4</span></p>
+<h2>This sweep</h2><div class="card"><table>
+<tr><th>Case</th><th>Mechanical rate</th><th>Clean</th><th>&Delta;</th>
+<th>History</th><th>Most common failure</th><th>Your verdict</th></tr>
+<tr><td class='mono'>EV-03<div class='sub'>Expedited return is the cheaper option</div></td><td class='rate'><span class='track'><span class='fill bad' style='width:20%'></span></span><span class='num'>20%</span></td><td class='mono'>1/5</td><td><span class='flat'>—</span></td><td class='spark'><i style='height:4px' title='2026-08-23T12-57-15: 20%'></i></td><td><span class='fail'>WAREHOUSE SUMMARY exposure matches engine total (600)</span></td><td><span class='flat'>not judged</span></td></tr>
+</table><p class="note">Mechanical checks compare the model's output against the pricing
+engine — independently computed arithmetic, not the agent grading itself. They do not judge
+whether the explanation is any good. That is the verdict column, and it is yours.</p></div>
+<h2>Where to look first</h2><div class="card"><table>
+<tr><th>Count</th><th>Failing check</th></tr>
+<tr><td class='mono'>4×</td><td>EV-03 · WAREHOUSE SUMMARY exposure matches engine total (600)</td></tr>
+</table>
+<p class="note">Ranked by frequency across every run in this sweep. At 100 runs per case you
+cannot read 500 transcripts — this is the list that says which handful to open. Full
+transcripts: <span class="mono">evals/runs/2026-08-23T12-57-15.json</span></p></div>
+<h2>Memory — every sweep on record</h2><div class="card"><table>
+<tr><th>When</th><th>Commit</th><th>Runs</th><th>Rates</th></tr>
+<tr><td class='mono'>2026-08-23 12:57</td><td class='mono'>9a238b4</td><td class='mono'>5</td><td><span class='pill'>03 20%</span></td></tr>
+</table>
+<p class="note">Each sweep is tied to the commit that produced it. A pass rate without the
+code behind it is a statistic; with it, it is a record of cause and effect.</p></div>

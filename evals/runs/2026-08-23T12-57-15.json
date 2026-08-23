@@ -1,0 +1,102 @@
+{
+  "started": "2026-08-23T12:57:15.225Z",
+  "model": "claude-sonnet-4-5",
+  "runs_per_case": 5,
+  "git_sha": "9a238b4",
+  "cases": {
+    "EV-03": {
+      "name": "Expedited return is the cheaper option",
+      "expected_status": "OK",
+      "passes": 5,
+      "runs": 5,
+      "rate": 100,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "",
+      "note": "",
+      "failures": {},
+      "raw": [
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk), 1 container reviewed, 1 at risk, 0 escalated, 800 EUR total exposure at stake\n\nCONTAINER: L-5533\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 20DRY\nDAYS LEFT: 8\nCOUNTS: 2 containers within 2 days of expiry (P-2041, L-5518); threshold 5; NOT MET. Free move slots on 2026-08-04: 1 of 4 (P-2044, L-5522, P-2048 already booked).\nOPTIONS: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR.\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: Expedite the return at 600 EUR\nRATIONALE: Expedite costs 600 EUR and brings the container back before expiry. Extension would cost 650 EUR, saving nothing. Accepting the 6-day overrun costs 1400 EUR, 800 EUR more than expediting.\nWHY: days_left, next_standard_slot, free_time_expiry; CC-3, XV-2, XV-4\nSOURCES: L-5533, CC-3, XV-2, XV-4\nRETURN DAY: 2026-08-05\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5002,
+            "cache_creation_input_tokens": 3097,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 3097,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 384,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        },
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 1 at risk, 0 escalated, 800 EUR exposure at stake\n\nCONTAINER: L-5533\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 20DRY\nDAYS LEFT: 8\nCOUNTS: 0 containers within 2 days of expiry; threshold 5; NOT MET. Free move slots on target day 2026-08-17: 0 of 4 (no containers booked that day).\nOPTIONS: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR.\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: expedite the return at 600 EUR\nRATIONALE: Expediting saves 800 EUR versus accepting six days' overrun at 150 EUR/day. Extension would cost 650 EUR but requires request five days before expiry and L-5533 has only eight days remaining, placing it inside the five-day window. Expedite is the only compliant lever under 1400 EUR.\nWHY: days_left, next_standard_slot; CC-3, XV-2, XV-4.\nSOURCES: L-5533, CC-3, XV-2, XV-4\nRETURN DAY: 2026-08-05\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5002,
+            "cache_creation_input_tokens": 3097,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 3097,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 379,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        },
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 1 at risk, 0 escalated, 800 EUR exposure at stake\n\nCONTAINER: L-5533\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 20DRY\nDAYS LEFT: 8\nCOUNTS: 2 containers within 2 days of expiry (P-2041, L-5518); threshold 5; NOT MET. Free move slots on 2026-08-04: 1 of 4 (P-2044, L-5522, P-2048 already booked).\nOPTIONS: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR.\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: expedite the return at 600 EUR\nRATIONALE: Expediting at 600 EUR saves 800 EUR versus accepting the 6-day overrun at 1400 EUR. Extension at 650 EUR is available but costs 50 EUR more than expedite. The next standard slot on 2026-08-17 falls 6 days after free-time expiry on 2026-08-11, creating a 900 EUR D&D exposure at Leviatán's 150 EUR per day rate.\nWHY: days_left, next_standard_slot, free_time_expiry; CC-3, XV-2, XV-4.\nSOURCES: L-5533, CC-3, XV-2, XV-4\nRETURN DAY: within 48 hours of approval per XV-2\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5002,
+            "cache_creation_input_tokens": 3097,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 3097,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 440,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        },
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 1 at risk, 0 escalated, 800 EUR exposure at stake\n\nCONTAINER: L-5533\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 20DRY\nDAYS LEFT: 8\nCOUNTS: Containers within 2 days of expiry at WH-BCN: 2 (P-2041, L-5518); threshold 5; NOT MET. Free move slots on target day 2026-08-17: 4 of 4 available (no containers booked).\nOPTIONS: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR.\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: expedite the return at 600 EUR\nRATIONALE: Expedite at 600 EUR saves 800 EUR compared to accepting the 6-day overrun at 1400 EUR. Extension at 650 EUR is 50 EUR more expensive than expedite and requires a 5-day request window which expires 2026-08-06. The container has 8 days left, so extension is still eligible but expedite is cheaper.\nWHY: days_left, next_standard_slot, free_time_expiry; CC-3, XV-2, XV-4.\nSOURCES: L-5533, CC-3, XV-2, XV-4\nRETURN DAY: 2026-08-05\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5002,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3097,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 413,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        },
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 1 at risk, 0 escalated, 600 EUR total exposure at stake\n\nCONTAINER: L-5533\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 20DRY\nDAYS LEFT: 8\nCOUNTS: 2 containers within 2 days of expiry (P-2041, L-5518); threshold 5; NOT MET. Free move slots on 2026-08-04: 1 of 4 (P-2044, L-5522, P-2048 already booked).\nOPTIONS: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR.\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: Expedite the return at 600 EUR\nRATIONALE: Expedite at 600 EUR saves 800 EUR against accepting 6-day overrun at 1400 EUR. Extension at 650 EUR is 50 EUR more expensive than expedite, making expedite the least-cost option. The container has 8 days left but the next standard slot falls 6 days after free-time expiry, creating unavoidable overrun without intervention.\nWHY: days_left, next_standard_slot, free_time_expiry; CC-3, XV-2, XV-4\nSOURCES: L-5533, CC-3, XV-2, XV-4\nRETURN DAY: 2026-08-09\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5002,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3097,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 420,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        }
+      ]
+    }
+  }
+}
