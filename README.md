@@ -47,6 +47,10 @@ This split exists because the eval set showed exactly where the model was reliab
 
 Run `node test/engine-test.js index.html` to check every figure against the eval expectations. No API key needed.
 
+## Who it's built for
+
+The console is organized by warehouse, not by test scenario. Open it and you see WH-BCN and WH-VLC, each with the containers that actually have no return booked yet — sorted by urgency, badged by what the pricing engine found. That's the operator's real weekly review, not five hand-picked demo cases. The five documented eval cases still exist and still run exactly as rigorously — they live in the Evals tab, which is where a test harness belongs, not the operator's front door. Full reasoning in [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Honest limits
 
 This prototype is evaluated against five test cases whose expected behaviour was written before the agent ever ran. The current scoreboard is **three pass, one needs work, one fail** — and the failures are visible in the app's own Evals view rather than hidden.

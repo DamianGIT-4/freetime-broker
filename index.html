@@ -152,7 +152,20 @@ body {
 .case-card .id { font-family: var(--font-mono); font-size: var(--fs-0); color: var(--ink-3); }
 .case-card .title { font-weight: 600; }
 
-/* ═══ CHIPS (one-click demo cases, citations) ═══ */
+/* ═══ WAREHOUSE REVIEW (console left column) — Lana's actual unit of
+   work is a warehouse's containers, not a named test scenario. ═══ */
+.warehouse-section { margin-bottom: var(--sp-4); }
+.warehouse-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.warehouse-name { font-weight: 700; }
+.container-row {
+  font-size: var(--fs-0); color: var(--ink-2);
+  padding: var(--sp-1) 0; border-bottom: var(--border-w) solid var(--line);
+}
+.container-row:last-of-type { border-bottom: none; }
+details.routine { margin-top: var(--sp-2); }
+details.routine summary { color: var(--ink-3); }
+
+/* ═══ CHIPS (citations) ═══ */
 .chip {
   display: inline-flex; align-items: center; gap: var(--sp-1);
   padding: 4px 12px; border-radius: 999px;
@@ -319,38 +332,34 @@ body {
   border: var(--border-w) solid var(--line); border-radius: var(--radius-sm);
   font-family: var(--font-body); font-size: var(--fs-0);
 }
-/* One-click demo chips. Same rule the kit already uses for .chip:hover,
-   so the selected chip reads the same way a hovered one does. */
-#demo-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-#demo-chips .chip.active { color: var(--ink); border-color: var(--accent); }
-/* The case list scrolls inside its own panel so Settings below it stays on
-   screen without scrolling the whole page. Same pattern the kit already uses
-   for .log { max-height: 420px; overflow: auto; }.
+/* The warehouse list scrolls inside its own panel so Settings below it stays
+   on screen without scrolling the whole page. Same pattern the kit already
+   uses for .log { max-height: 420px; overflow: auto; }.
    TO REVERT: delete this rule and the list grows the page again. */
-#case-list { max-height: min(420px, 38vh); overflow-y: auto; padding-right: var(--sp-2); }
+#warehouse-list { max-height: min(420px, 38vh); overflow-y: auto; padding-right: var(--sp-2); }
 
 /* Quiet the scrollbars in the two panels that scroll internally. Colours come
    from existing tokens only: the track disappears, the thumb is the same
    hairline used for borders, and it lifts to meta-text grey on hover.
    TO REVERT: delete this block and the browser default returns. */
-html, #case-list, .log, .scroll-x, pre {
+html, #warehouse-list, .log, .scroll-x, pre {
   scrollbar-width: thin; scrollbar-color: var(--line) transparent;
 }
-html::-webkit-scrollbar, #case-list::-webkit-scrollbar, .log::-webkit-scrollbar,
+html::-webkit-scrollbar, #warehouse-list::-webkit-scrollbar, .log::-webkit-scrollbar,
 .scroll-x::-webkit-scrollbar, pre::-webkit-scrollbar { width: 10px; height: 10px; }
 
-html::-webkit-scrollbar-track, #case-list::-webkit-scrollbar-track,
+html::-webkit-scrollbar-track, #warehouse-list::-webkit-scrollbar-track,
 .log::-webkit-scrollbar-track, .scroll-x::-webkit-scrollbar-track,
 pre::-webkit-scrollbar-track { background: transparent; }
 
-html::-webkit-scrollbar-thumb, #case-list::-webkit-scrollbar-thumb,
+html::-webkit-scrollbar-thumb, #warehouse-list::-webkit-scrollbar-thumb,
 .log::-webkit-scrollbar-thumb, .scroll-x::-webkit-scrollbar-thumb,
 pre::-webkit-scrollbar-thumb {
   background: var(--line); border-radius: 999px;
   border: 3px solid transparent; background-clip: content-box;
 }
 
-html::-webkit-scrollbar-thumb:hover, #case-list::-webkit-scrollbar-thumb:hover,
+html::-webkit-scrollbar-thumb:hover, #warehouse-list::-webkit-scrollbar-thumb:hover,
 .log::-webkit-scrollbar-thumb:hover, .scroll-x::-webkit-scrollbar-thumb:hover,
 pre::-webkit-scrollbar-thumb:hover {
   background: var(--ink-3); background-clip: content-box;
@@ -383,15 +392,8 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
 
   <div class="stack">
     <section class="panel">
-      <div class="panel-head">Cases</div>
-      <div class="panel-body">
-        <div id="demo-chips"></div>
-        <div id="case-list"></div>
-        <div class="foot">
-          <button type="button" id="run-all" class="btn primary">Run all cases</button>
-          <div id="run-all-status" class="meta-line"></div>
-        </div>
-      </div>
+      <div class="panel-head">This week's review</div>
+      <div class="panel-body" id="warehouse-list"></div>
     </section>
 
     <section class="panel">
@@ -425,14 +427,6 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">Sweep summary</div>
-      <div class="panel-body" id="run-all-summary">
-        <p class="muted">No sweep run yet.</p>
-        <p class="meta-line">Run all cases sends every case to the agent in sequence and
-        counts how many came back OK, refused, or errored.</p>
-      </div>
-    </section>
   </div>
 
 </div>
@@ -441,10 +435,24 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
   <section class="panel">
     <div class="panel-head">Evals</div>
     <div class="panel-body">
-      <p class="meta-line">Expected behaviour comes from the PRD and is never sent to the agent.
-      Actual is what the agent returned. The verdict is yours &mdash; the console does not score itself.</p>
+      <p class="meta-line">Five documented test cases, each with expected behaviour written
+      before the agent ever ran &mdash; never sent to the agent itself. Actual is what it
+      returned. The verdict is yours; the console does not score itself.</p>
+      <div class="foot">
+        <button type="button" id="run-all" class="btn primary">Run all 5 cases</button>
+        <div id="run-all-status" class="meta-line"></div>
+      </div>
       <div id="evals"></div>
       <div id="limitations"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">Sweep summary</div>
+    <div class="panel-body" id="run-all-summary">
+      <p class="muted">No sweep run yet.</p>
+      <p class="meta-line">Run all 5 cases sends every documented eval case to the agent in
+      sequence and counts how many came back OK, refused, or errored.</p>
     </div>
   </section>
 </div>
@@ -925,8 +933,7 @@ function renderTopbarMeta() {
   document.getElementById("world-meta").innerHTML =
     CONTAINERS_INYARD.length + " containers in yard · "
     + CONTAINERS_INBOUND.length + " inbound · "
-    + POLICY_FILES.length + " policy files · "
-    + EVAL_CASES.length + " eval cases";
+    + POLICY_FILES.length + " policy files";
 }
 
 /* What the HUMAN decided about a case, aggregated across its containers.
@@ -960,48 +967,138 @@ function humanOutcome(caseId) {
   return { label: "APPROVED", kind: "ok", detail: "" };
 }
 
-/* One-click demo chips, labeled by what each case TESTS rather than by its
-   full title. Short enough to hit on camera without scrolling or typing. */
-/* Short labels on purpose: the chips are the INDEX, the cards below are the
-   entries. Same order, so a chip and its card are obviously the same case.
-   TO REVERT to the long labels, restore these:
-     "Happy path — ranking", "Extension cheaper", "Expedite cheaper",
-     "Conflicting data", "Boundary — must refuse"                           */
-const DEMO_CHIPS = [
-  { caseId: "EV-01", label: "Happy path" },
-  { caseId: "EV-02", label: "Extension" },
-  { caseId: "EV-03", label: "Expedite" },
-  { caseId: "EV-04", label: "Conflicting data" },
-  { caseId: "EV-05", label: "Boundary" }
-];
+/* ------------------------------------------------------------------
+   WAREHOUSE REVIEW — Lana's actual unit of work.
 
-function renderDemoChips() {
-  document.getElementById("demo-chips").innerHTML = DEMO_CHIPS
-    .filter(chip => EVAL_CASES.some(c => c.case_id === chip.caseId))
-    .map(chip =>
-      "<span class=\"chip" + (chip.caseId === SELECTED_CASE ? " active" : "") + "\""
-      + " data-chip=\"" + esc(chip.caseId) + "\""
-      + " title=\"" + esc(chip.caseId) + "\">" + esc(chip.label) + "</span>"
-    ).join("");
+   The five eval cases are hand-picked test scenarios, useful for proving
+   the agent behaves, but not how a real week works. A real weekly review
+   is every container in one warehouse that has no booked_return_date
+   yet — not "run Boundary" or "run Extension". This builds that scope
+   straight from the roster and wraps it in the shape caseScope(),
+   buildUserMessage() and computePricing() already expect, so nothing
+   about the engine or the prompt changes to serve it. Defined here,
+   ahead of the pricing engine below, so the engine and everything after
+   it can call it.
+   ------------------------------------------------------------------ */
+
+const WAREHOUSES = Array.from(new Set(CONTAINERS_INYARD.map(c => c.warehouse))).sort();
+
+/* Transcribed from warehouse_policy.md WP-1 for display only. Same
+   drift risk already documented for CONTRACTS and MOVE_CAP: if the
+   policy file changes and this does not, the two disagree silently. */
+const WAREHOUSE_INFO = {
+  "WH-BCN": { slots: 180, occupied: 151, band: "At-risk" },
+  "WH-VLC": { slots: 240, occupied: 118, band: "Healthy" }
+};
+function warehouseOccupancy(wh) {
+  const info = WAREHOUSE_INFO[wh];
+  return info ? Math.round((info.occupied / info.slots) * 100) : null;
 }
 
-function renderCaseList() {
-  document.getElementById("case-list").innerHTML = EVAL_CASES.map(c => {
-    const active = c.case_id === SELECTED_CASE ? " active" : "";
-    const outcome = humanOutcome(c.case_id);
+function needsReview(c) { return !c.booked_return_date; }
+function warehouseContainers(wh) { return CONTAINERS_INYARD.filter(c => c.warehouse === wh); }
 
-    let foot = "<div class=\"foot\">" + statusBadge(caseStatus(c.case_id));
-    if (outcome) foot += " " + badge(outcome.label, outcome.kind);
-    foot += "</div>";
-    if (outcome && outcome.detail) {
-      foot += "<div class=\"meta-line\">" + esc(outcome.detail) + "</div>";
+/* A synthetic "case" the existing pipeline can consume unchanged. */
+function warehouseReviewCase(wh) {
+  const ids = warehouseContainers(wh).filter(needsReview).map(c => c.container_id);
+  return {
+    case_id: "REVIEW-" + wh, case_name: "Weekly review", warehouse: wh,
+    scope_container_ids: ids.join("|"), trigger_type: "weekly_review",
+    expected_behavior: "", expected_status: "", why_this_case: ""
+  };
+}
+
+function isWarehouseReview(caseId) {
+  return typeof caseId === "string" && caseId.indexOf("REVIEW-") === 0;
+}
+
+/* Every case lookup in the app goes through here — one of the five
+   documented eval cases, or one of the live warehouse reviews built
+   fresh from the roster on every call, so it can never go stale. */
+function findAnyCase(caseId) {
+  if (isWarehouseReview(caseId)) return warehouseReviewCase(caseId.slice(7));
+  return EVAL_CASES.find(c => c.case_id === caseId) || null;
+}
+
+/* A short label for the run log and the panel head — "REVIEW-WH-BCN" is
+   an internal id, not something Lana should have to read. */
+function caseLabel(caseId) {
+  return isWarehouseReview(caseId) ? caseId.slice(7) + " review" : caseId;
+}
+
+/* One computed badge per needs-review container. Computed, not typed by
+   hand, so it can never go stale the way the old EVAL_SEED notes did —
+   see reason for that change in ARCHITECTURE.md. Reads the pricing
+   engine's own verdicts, defined just below. */
+function reviewReasonBadge(containerId, pricing) {
+  const entry = pricing.scoped.find(e => e.container.container_id === containerId);
+  if (!entry) return null;
+  if (entry.refuse) {
+    return entry.refuse.trigger === "No matching policy"
+      ? { label: "Uncovered unit", kind: "danger" }
+      : { label: "Data conflict", kind: "warn" };
+  }
+  if (entry.reallocated || pricing.allocation.some(a => a.winner === containerId)) {
+    return { label: "Contested slot", kind: "warn" };
+  }
+  return { label: "Pricing due", kind: "info" };
+}
+
+function renderWarehouseList() {
+  document.getElementById("warehouse-list").innerHTML = WAREHOUSES.map(wh => {
+    const all = warehouseContainers(wh);
+    const review = all.filter(needsReview).sort((a, b) => {
+      const da = a.days_left === "" ? Infinity : Number(a.days_left);
+      const db = b.days_left === "" ? Infinity : Number(b.days_left);
+      return da - db;
+    });
+    const booked = all.filter(c => !needsReview(c));
+    const pricing = review.length ? computePricing(warehouseReviewCase(wh)) : null;
+    const info = WAREHOUSE_INFO[wh];
+    const occ = warehouseOccupancy(wh);
+    const caseId = "REVIEW-" + wh;
+    const active = caseId === SELECTED_CASE ? " active" : "";
+    const outcome = humanOutcome(caseId);
+
+    let block = "<div class=\"warehouse-section\">"
+      + "<div class=\"warehouse-head\"><span class=\"warehouse-name\">" + esc(wh) + "</span>"
+      + (occ !== null && info
+          ? " " + badge(occ + "% · " + esc(info.band), occ >= 80 ? "danger" : occ >= 70 ? "warn" : "ok")
+          : "")
+      + "</div>";
+
+    if (!review.length) {
+      block += "<p class=\"muted\">Nothing awaiting review — every container here already"
+             + " has a booked return.</p>";
+    } else {
+      block += "<div class=\"case-card" + active + "\" data-case=\"" + esc(caseId) + "\">"
+        + "<div class=\"title\">" + review.length + " container"
+        + (review.length === 1 ? "" : "s") + " awaiting review</div>";
+
+      block += review.map(c => {
+        const reason = reviewReasonBadge(c.container_id, pricing);
+        return "<div class=\"container-row\">"
+          + "<span class=\"mono\">" + esc(c.container_id) + "</span> · " + esc(c.carrier)
+          + " · " + esc(c.container_type)
+          + (c.days_left !== "" ? " · " + esc(c.days_left) + "d left" : " · days unknown")
+          + (reason ? " " + badge(reason.label, reason.kind) : "")
+          + "</div>";
+      }).join("");
+
+      block += "<div class=\"foot\">" + statusBadge(caseStatus(caseId));
+      if (outcome) block += " " + badge(outcome.label, outcome.kind);
+      block += "</div></div>";
     }
 
-    return "<div class=\"case-card" + active + "\" data-case=\"" + esc(c.case_id) + "\">"
-      + "<div class=\"id\">" + esc(c.case_id) + "</div>"
-      + "<div class=\"title\">" + esc(c.case_name) + "</div>"
-      + foot
-      + "</div>";
+    if (booked.length) {
+      block += "<details class=\"routine\"><summary>" + booked.length
+        + " already booked this week</summary>"
+        + booked.map(c => "<div class=\"meta-line\">" + esc(c.container_id) + " · "
+            + esc(c.carrier) + " · returns " + esc(c.booked_return_date) + "</div>").join("")
+        + "</details>";
+    }
+
+    return block + "</div>";
   }).join("");
 }
 
@@ -1026,8 +1123,8 @@ function renderWorldView() {
          + " <strong>Settings</strong>, lower left, and press Save key. It is stored only in"
          + " this browser and never written into the file.</div>";
   } else {
-    html += "<p class=\"muted\">Pick a case from the chips on the left. Every case moves through"
-         + " the same five stages: input, context, decision, output, review.</p>";
+    html += "<p class=\"muted\">Pick a warehouse's review from the list on the left. Every review"
+         + " moves through the same five stages: input, context, decision, output, review.</p>";
   }
 
   html += stage(1, "The world this agent can see",
@@ -1059,14 +1156,17 @@ function renderMain() {
     return;
   }
 
-  const c = EVAL_CASES.find(x => x.case_id === SELECTED_CASE);
+  const c = findAnyCase(SELECTED_CASE);
   const ids = caseScope(c);
   const found = ids.map(findContainer).filter(Boolean);
   const missing = ids.filter(id => !findContainer(id));
   const state = RUN_STATE[SELECTED_CASE] || {};
   const stored = RESULTS[SELECTED_CASE];
+  const isReview = isWarehouseReview(SELECTED_CASE);
 
-  head.innerHTML = esc(c.case_id) + " · " + esc(c.case_name);
+  head.innerHTML = isReview
+    ? "This week's review · " + esc(c.warehouse)
+    : esc(c.case_id) + " · " + esc(c.case_name);
 
   /* All five stages are drawn every time, whether or not the case has run.
      A stranger should be able to see where a case is going before it gets
@@ -1076,13 +1176,20 @@ function renderMain() {
   let html = "";
 
   /* ── 1 INPUT ── */
-  html += stage(1, "Input", "The case Lana is reviewing this week. Picked here, not typed by the agent.");
-  html += "<p class=\"meta-line\">" + esc(c.warehouse) + " · trigger " + esc(c.trigger_type)
-       + " · expected " + esc(c.expected_status) + "</p>";
-  html += "<div class=\"field\"><div class=\"k\">Expected</div><div class=\"v\">"
-       + esc(c.expected_behavior) + "</div></div>";
-  html += "<div class=\"field\"><div class=\"k\">Why this case</div><div class=\"v why\">"
-       + esc(c.why_this_case) + "</div></div>";
+  if (isReview) {
+    html += stage(1, "Input", "Every container in " + esc(c.warehouse) + " with no return"
+         + " booked yet — the actual week, not a hand-picked scenario.");
+    html += "<p class=\"meta-line\">" + esc(c.warehouse) + " · " + found.length
+         + " container(s) awaiting review</p>";
+  } else {
+    html += stage(1, "Input", "The case Lana is reviewing this week. Picked here, not typed by the agent.");
+    html += "<p class=\"meta-line\">" + esc(c.warehouse) + " · trigger " + esc(c.trigger_type)
+         + " · expected " + esc(c.expected_status) + "</p>";
+    html += "<div class=\"field\"><div class=\"k\">Expected</div><div class=\"v\">"
+         + esc(c.expected_behavior) + "</div></div>";
+    html += "<div class=\"field\"><div class=\"k\">Why this case</div><div class=\"v why\">"
+         + esc(c.why_this_case) + "</div></div>";
+  }
 
   /* ── 2 CONTEXT ── */
   html += stage(2, "Context",
@@ -1095,9 +1202,12 @@ function renderMain() {
        + " <span class=\"chip cite\">" + esc(c.warehouse) + " roster</span>"
        + " <span class=\"chip cite\">week's arrivals</span></p>";
 
+  const runLabel = isReview
+    ? "Run this week's review (" + found.length + " container" + (found.length === 1 ? "" : "s") + ")"
+    : "Run " + esc(c.case_id);
   html += "<p class=\"foot\">"
        + "<button type=\"button\" class=\"btn primary run-btn\" data-case=\"" + esc(c.case_id) + "\""
-       + (state.running ? " disabled" : "") + ">Run " + esc(c.case_id) + "</button></p>";
+       + (state.running ? " disabled" : "") + ">" + runLabel + "</button></p>";
 
   /* Say it before the click, not after it fails. */
   if (!getApiKey()) {
@@ -1395,8 +1505,7 @@ document.addEventListener("click", function (event) {
 });
 
 function renderConsole() {
-  renderDemoChips();
-  renderCaseList();
+  renderWarehouseList();
   renderMain();
   renderEvals();
   renderLimitations();
@@ -2238,7 +2347,7 @@ function renderRunLog() {
     "<div class=\"row\">"
     + "<span class=\"t\">" + esc(e.time) + "</span>"
     + "<span class=\"entry\">"
-    + "<span class=\"who\">" + esc(e.caseId) + " · " + esc(e.container) + "</span>"
+    + "<span class=\"who\">" + esc(caseLabel(e.caseId)) + " · " + esc(e.container) + "</span>"
     + "<span>agent: " + esc(e.agentDecision) + "</span>"
     + "<span class=\"" + logActionClass(e.humanAction) + "\">human: " + esc(e.humanAction)
     + (e.note ? " — " + esc(e.note) : "") + "</span>"
@@ -2475,7 +2584,7 @@ function renderReview(parsed, meta) {
    ------------------------------------------------------------------ */
 
 async function runCase(caseId) {
-  const evalCase = EVAL_CASES.find(c => c.case_id === caseId);
+  const evalCase = findAnyCase(caseId);
   const userMessage = buildUserMessage(evalCase);
 
   /* Progress lives in state, not in the DOM, so switching cases mid-run
@@ -2694,9 +2803,6 @@ function handleGate(action, key) {
 
 document.addEventListener("click", function (event) {
   if (event.target.closest("#run-all")) { runAll(); return; }
-
-  const chip = event.target.closest("#demo-chips .chip");
-  if (chip) { selectCase(chip.getAttribute("data-chip"), true); return; }
 
   const card = event.target.closest(".case-card");
   if (card) { selectCase(card.getAttribute("data-case"), false); return; }

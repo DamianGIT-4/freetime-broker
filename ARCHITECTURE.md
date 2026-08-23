@@ -118,6 +118,23 @@ node test/eval-runner.js --self-test    # no API call
 
 That replays the recorded EV-03 bug — every figure correct, the cheapest lever named, then a refusal citing the rule it had just satisfied — and confirms the checks catch it, along with a subtler case where a total is quietly altered from 600 to 550. A harness that cannot fail known-bad output cannot be trusted to pass anything.
 
+## The console: built for a test harness, not for Lana
+
+Everything above fixed the agent. It didn't fix the product wrapped around it.
+
+Until this change, the console's entire navigation was five demo chips labelled by what each one *tests* — "Happy path," "Extension," "Expedite," "Conflicting data," "Boundary." That's the right vocabulary for proving the agent behaves. It is not Lana's vocabulary. She doesn't think "let me run the Boundary case" — she thinks "what's sitting in Barcelona this week that needs my attention." The product's entry point was organized around the five scenarios built to *test* it, not around the operator's actual job.
+
+It also hid most of the yard. Of the 16 containers on the roster, only 5 appear in any eval case. The other 11 — mostly containers with a return already booked — never appeared anywhere in the UI, even though a real weekly review includes them as context: they're what's already consuming the warehouse's daily move-slot capacity.
+
+**The fix: the console is now organized by warehouse, not by test case.**
+
+- Two sections, WH-BCN and WH-VLC, each headed by its real occupancy and band.
+- Every container with no return booked yet — the operator's actual open items — sorted by days left, each carrying a badge computed by the pricing engine: *Contested slot*, *Uncovered unit*, *Data conflict*, or *Pricing due*. Not written by hand, so it can't go stale the way the old scoreboard notes did.
+- Containers already booked sit collapsed underneath, present for context, not demanding attention.
+- One click opens the same five-stage review (context → decision → output → approve/edit/escalate) that already existed — nothing about the review itself changed, only how you get there.
+
+Technically this required almost no new machinery. A warehouse's review is built as a synthetic case — `{ warehouse, scope_container_ids }` — the same shape `buildUserMessage()` and `computePricing()` already consumed for the five eval cases. `findAnyCase()` resolves either kind by id. The five documented cases still exist, still runnable, still exactly as rigorous — they just moved to the Evals tab, which is where a test harness belongs. Nothing downstream of case selection (the decision panel, the human gate, the run log) needed to change at all.
+
 ## The general lesson
 
 The reliable half of this agent was always the judgement half — spotting that data contradicts itself, recognising that a contracted carrier supplying an uncontracted unit type is still out of contract, and explaining why in language a person can check. Those are genuinely hard, and the model did them correctly on every run.
