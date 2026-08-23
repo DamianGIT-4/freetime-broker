@@ -171,6 +171,19 @@ body {
    judgement are never below the ones that only need a click. */
 .lane { margin-top: var(--sp-3); }
 .lane-head { margin-bottom: var(--sp-1); }
+
+/* ═══ PASS-RATE BARS (Evals) — a percentage alone hides how close a case
+   sits to the edge; the bar separates 94% from 61% without reading. ═══ */
+.rate { display: flex; align-items: center; gap: var(--sp-2); }
+.rate-track {
+  flex: 1; height: 8px; border-radius: 999px;
+  background: var(--chip); overflow: hidden; min-width: 80px;
+}
+.rate-fill { height: 100%; border-radius: 999px; }
+.rate-fill.ok     { background: var(--ok); }
+.rate-fill.warn   { background: var(--warn); }
+.rate-fill.danger { background: var(--danger); }
+.rate-num { font-family: var(--font-mono); font-size: var(--fs-0); color: var(--ink-2); }
 details.routine { margin-top: var(--sp-2); }
 details.routine summary { color: var(--ink-3); }
 
@@ -447,21 +460,26 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
       <p class="meta-line">Five documented test cases, each with expected behaviour written
       before the agent ever ran &mdash; never sent to the agent itself. Actual is what it
       returned. The verdict is yours; the console does not score itself.</p>
-      <div class="foot">
-        <button type="button" id="run-all" class="btn primary">Run all 5 cases</button>
-        <div id="run-all-status" class="meta-line"></div>
-      </div>
       <div id="evals"></div>
       <div id="limitations"></div>
     </div>
   </section>
 
   <section class="panel">
-    <div class="panel-head">Sweep summary</div>
-    <div class="panel-body" id="run-all-summary">
-      <p class="muted">No sweep run yet.</p>
-      <p class="meta-line">Run all 5 cases sends every documented eval case to the agent in
-      sequence and counts how many came back OK, refused, or errored.</p>
+    <div class="panel-head">Running a sweep</div>
+    <div class="panel-body">
+      <p class="meta-line">Sweeps run from the command line, not from this page. The agent is
+      non-deterministic &mdash; cases have behaved differently on identical input &mdash; so a
+      single run is close to noise. The runner measures a pass <em>rate</em> over many runs and
+      writes the result into the repository, where it is versioned and can be read by someone
+      other than the person who ran it.</p>
+      <pre>export ANTHROPIC_API_KEY=...
+node test/eval-runner.js --runs 20          # a normal sweep
+node test/eval-runner.js --runs 100         # before a release
+node test/engine-test.js index.html         # arithmetic only, no key
+node test/allocator-test.js index.html      # scale invariants, no key</pre>
+      <p class="boundary-note">This page shows the last committed sweep and nothing else. It
+      cannot go stale, because nothing on it is typed by hand.</p>
     </div>
   </section>
 </div>
@@ -1350,56 +1368,53 @@ function renderMain() {
    that graded its own output would only ever confirm itself.
    ------------------------------------------------------------------ */
 
-const VERDICTS = ["", "Pass", "Needs work", "Fail"];
+/* ------------------------------------------------------------------
+   WHY THIS IS READ-ONLY NOW
 
-/* The verdicts and notes recorded by hand after the sweep of 2026-08-06.
-   Used only when nothing has been saved in this browser yet — once you edit
-   a verdict or a note, your version is stored and these are not consulted. */
-const EVAL_SEED = {
-  "EV-01": { verdict: "Fail", note: "Refused both containers claiming \"five or more containers within 2 days of expiry\" when the true count is three; asserted the threshold without checking it." },
-  "EV-02": { verdict: "Pass", note: "Correct 3-day extension at EUR 75 with correct dates, though it never priced expedite as an alternative." },
-  "EV-03": { verdict: "Fail", note: "Recommended the EUR 150 extension over the EUR 100 expedite; expedite was never compared, costing EUR 50." },
-  "EV-04": { verdict: "Pass", note: "Named discharge_confirmed against free_time_start, refused, invented no dates or charges." },
-  "EV-05": { verdict: "Pass", note: "Refused on unit type, cited CC-1 and CC-5, did not borrow Poseidón's terms." }
-};
+   This tab used to run cases and take hand-typed verdicts, stored in
+   localStorage. Three things were wrong with that:
 
-const EVAL_STORAGE = "falla_eval_results";
-const EVAL_JUDGEMENTS = {};   /* caseId -> { verdict, note } */
+     1. It was developer tooling living inside an operator's product.
+        Lana has no use for it — the same category error the console
+        itself had before it was rebuilt around warehouses.
 
-function getJudgement(caseId) {
-  if (!EVAL_JUDGEMENTS[caseId]) EVAL_JUDGEMENTS[caseId] = { verdict: "", note: "" };
-  return EVAL_JUDGEMENTS[caseId];
+     2. The verdicts were seeded from a hardcoded object recorded on
+        6 August. After the pricing engine landed, that object still
+        claimed EV-03 was a Fail on a case the engine had fixed. The
+        screen was confidently reporting a result that was no longer
+        true, and nothing in the product could notice.
+
+     3. One run, in one browser, judged by hand, stored where nobody
+        else can see it, is weak evidence. test/eval-runner.js gives
+        pass RATES over N runs, checked mechanically against the
+        pricing engine, written into the repository as versioned
+        files. It is strictly better at the same job.
+
+   So the measuring moved to the CLI and this became what it always
+   should have been: a read-only view of committed evidence. It loads
+   evals/latest.json — produced by the runner, committed to git — and
+   shows the last real sweep. Nothing here can go stale, because
+   nothing here is typed.
+   ------------------------------------------------------------------ */
+
+let EVAL_EVIDENCE = null;      /* the parsed evals/latest.json, or null */
+let EVIDENCE_ERROR = null;
+
+function verdictOf(caseId) {
+  if (!EVAL_EVIDENCE || !EVAL_EVIDENCE.cases) return null;
+  return EVAL_EVIDENCE.cases[caseId] || null;
 }
 
-/* Saved: the judgements AND the runs they were made against. A verdict
-   without the output it judged is not evidence of anything. */
-function saveEvalResults() {
-  try {
-    localStorage.setItem(EVAL_STORAGE, JSON.stringify({
-      judgements: EVAL_JUDGEMENTS,
-      results: RESULTS
-    }));
-  } catch (err) { /* storage full or blocked — the session still works */ }
-}
-
-function loadEvalResults() {
-  let saved = null;
-  try {
-    const raw = localStorage.getItem(EVAL_STORAGE);
-    if (raw) saved = JSON.parse(raw);
-  } catch (err) { saved = null; }
-
-  const judgements = (saved && saved.judgements) ? saved.judgements : EVAL_SEED;
-  Object.keys(judgements).forEach(caseId => {
-    EVAL_JUDGEMENTS[caseId] = {
-      verdict: judgements[caseId].verdict || "",
-      note: judgements[caseId].note || ""
-    };
-  });
-
-  if (saved && saved.results) {
-    Object.keys(saved.results).forEach(caseId => { RESULTS[caseId] = saved.results[caseId]; });
-  }
+/* Fetched rather than embedded, so a new sweep updates the page by
+   committing a JSON file — no edit to index.html, no chance of the two
+   disagreeing. Fails quietly to an honest empty state when opened from
+   file:// where fetch cannot read a sibling file. */
+function loadEvalEvidence() {
+  return fetch("evals/latest.json", { cache: "no-store" })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(data => { EVAL_EVIDENCE = data; })
+    .catch(err => { EVIDENCE_ERROR = err.message; })
+    .then(() => { renderEvals(); });
 }
 
 function verdictKind(verdict) {
@@ -1407,47 +1422,6 @@ function verdictKind(verdict) {
   if (verdict === "Needs work") return "warn";
   if (verdict === "Fail") return "danger";
   return "neutral";
-}
-
-/* What the agent actually decided, per container. Not truncated: this is
-   the column a reader compares against Expected. */
-function evalActual(caseId) {
-  const state = RUN_STATE[caseId] || {};
-  if (state.running) return "<span class=\"thinking\">Running…</span>";
-  if (state.error) return "<div class=\"error-note\">Run failed: " + esc(state.error) + "</div>";
-
-  const stored = RESULTS[caseId];
-  if (!stored) return "<span class=\"muted\">Not run yet.</span>";
-
-  let html = "<p>" + statusBadge(stored.parsed.runStatus) + "</p>";
-
-  if (!stored.parsed.ok) {
-    html += "<p class=\"meta-line\">Output did not match format: "
-         + esc(stored.parsed.problems.join("; ")) + "</p>";
-  }
-  if (stored.parsed.citationProblems && stored.parsed.citationProblems.length) {
-    html += "<p class=\"meta-line\">Citation check failed: "
-         + esc(stored.parsed.citationProblems.join("; ")) + "</p>";
-  }
-
-  stored.parsed.blocks.forEach(fields => {
-    const id = fields.CONTAINER || "(no container id)";
-    /* The working is what you judge the reasoning by, but COUNTS and OPTIONS
-       run to hundreds of characters each and make the table unreadable. Kept
-       in full, one click away, rather than truncated. */
-    html += "<p><strong>" + esc(id) + "</strong> &middot; " + esc(fields._status) + "<br>"
-         + esc(fields.RECOMMENDATION || "(no recommendation)")
-         + "<br><span class=\"meta-line\">Return day: " + esc(fields["RETURN DAY"] || "—") + "</span>"
-         + "</p>"
-         + "<details><summary>Show working</summary>"
-         + "<p class=\"meta-line\"><strong>Counts:</strong> " + esc(fields.COUNTS || "(not shown)") + "</p>"
-         + "<p class=\"meta-line\"><strong>Options:</strong> " + esc(fields.OPTIONS || "(not shown)") + "</p>"
-         + "</details>";
-  });
-
-  html += "<p class=\"meta-line\">" + esc(stored.meta.model)
-       + " · answered in " + esc(stored.meta.seconds) + "s</p>";
-  return html;
 }
 
 /* "6 Aug 2026, 14:32" — short enough for a stat tile. */
@@ -1460,38 +1434,43 @@ function formatRunDate(iso) {
            time: pad(d.getHours()) + ":" + pad(d.getMinutes()) };
 }
 
-/* The scoreboard is evidence, so it counts what actually happened: verdicts
-   you entered, and runs that actually produced output. */
+/* The scoreboard reports the last committed sweep and nothing else. If no
+   sweep has been recorded it says so, rather than showing a stale count
+   that would read as current. */
 function renderScoreboard() {
-  const tally = { "Pass": 0, "Needs work": 0, "Fail": 0 };
-  let casesRun = 0;
-  let latest = null;
-
-  EVAL_CASES.forEach(c => {
-    const verdict = getJudgement(c.case_id).verdict;
-    if (tally[verdict] !== undefined) tally[verdict]++;
-
-    const stored = RESULTS[c.case_id];
-    if (stored) {
-      casesRun++;
-      const runAt = stored.meta && stored.meta.runAt;
-      if (runAt && (!latest || runAt > latest)) latest = runAt;
-    }
-  });
-
-  const when = latest ? formatRunDate(latest) : null;
-
   const stat = (kind, number, label) =>
     "<div class=\"stat" + (kind ? " " + kind : "") + "\">"
     + "<div class=\"n\">" + esc(number) + "</div>"
     + "<div class=\"l\">" + esc(label) + "</div></div>";
 
+  if (!EVAL_EVIDENCE) {
+    return "<div class=\"scoreboard\">"
+      + stat("", "—", "No sweep recorded")
+      + stat("", "—", "Pass rate")
+      + stat("", "—", "Runs per case")
+      + "</div>";
+  }
+
+  const tally = { "Pass": 0, "Needs work": 0, "Fail": 0 };
+  let rateSum = 0, rated = 0;
+
+  EVAL_CASES.forEach(c => {
+    const v = verdictOf(c.case_id);
+    if (!v) return;
+    if (tally[v.verdict] !== undefined) tally[v.verdict]++;
+    if (typeof v.mechanical_rate === "number") { rateSum += v.mechanical_rate; rated++; }
+  });
+
+  const avg = rated ? Math.round((rateSum / rated) * 100) + "%" : "—";
+  const when = EVAL_EVIDENCE.started ? formatRunDate(EVAL_EVIDENCE.started) : null;
+
   return "<div class=\"scoreboard\">"
     + stat("ok", tally["Pass"], "Pass")
     + stat("warn", tally["Needs work"], "Needs work")
     + stat("danger", tally["Fail"], "Fail")
-    + stat("", casesRun + " of " + EVAL_CASES.length, "Cases run")
-    + stat("", when ? when.date : "—", when ? "Last run " + when.time : "Last run")
+    + stat("", avg, "Mechanical rate")
+    + stat("", EVAL_EVIDENCE.runs_per_case || "—", "Runs per case")
+    + stat("", when ? when.date : "—", "Last sweep")
     + "</div>";
 }
 
@@ -1526,58 +1505,78 @@ function renderLimitations() {
     + "</div></section>";
 }
 
+/* A pass rate as a bar. At 20 or 100 runs a percentage alone hides how
+   close a case is to the edge; the bar makes 94% and 61% differ at a
+   glance without anyone reading a number. */
+function rateBar(rate) {
+  if (typeof rate !== "number") return "<span class=\"muted\">—</span>";
+  const pct = Math.round(rate * 100);
+  const kind = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "danger";
+  return "<div class=\"rate\"><div class=\"rate-track\">"
+    + "<div class=\"rate-fill " + kind + "\" style=\"width:" + pct + "%\"></div></div>"
+    + "<span class=\"rate-num\">" + pct + "%</span></div>";
+}
+
 function renderEvals() {
   const rows = EVAL_CASES.map(c => {
-    const judgement = getJudgement(c.case_id);
-    const verdict = judgement.verdict;
-    const state = RUN_STATE[c.case_id] || {};
+    const v = verdictOf(c.case_id);
+    const verdict = v ? v.verdict : "";
 
-    const options = VERDICTS.map(v =>
-      "<option value=\"" + esc(v) + "\"" + (v === verdict ? " selected" : "") + ">"
-      + (v === "" ? "— not judged —" : esc(v)) + "</option>"
-    ).join("");
+    let actual;
+    if (!EVAL_EVIDENCE) {
+      actual = "<span class=\"muted\">No sweep recorded.</span>";
+    } else if (!v) {
+      actual = "<span class=\"muted\">Not included in the last sweep.</span>";
+    } else {
+      actual = rateBar(v.mechanical_rate)
+        + "<p class=\"meta-line\">" + esc(v.passes) + " of " + esc(v.runs)
+        + " runs clean</p>";
+      if (v.top_failure) {
+        actual += "<p class=\"meta-line\">Most common failure: " + esc(v.top_failure) + "</p>";
+      }
+    }
 
     return "<tr>"
       + "<td class=\"case-cell\"><strong>" + esc(c.case_id) + "</strong><br>"
-        + "<span class=\"meta-line\">" + esc(c.trigger_type) + "</span><br>"
-        + "<button type=\"button\" class=\"btn run-btn\" data-case=\"" + esc(c.case_id) + "\""
-        + (state.running ? " disabled" : "") + ">Run</button></td>"
+        + "<span class=\"meta-line\">" + esc(c.trigger_type) + "</span></td>"
       + "<td class=\"expected-cell\">" + statusBadge(c.expected_status) + "<br>"
         + esc(c.expected_behavior) + "</td>"
-      + "<td class=\"actual-cell\">" + evalActual(c.case_id) + "</td>"
-      + "<td>" + badge(verdict || "NOT JUDGED", verdictKind(verdict)) + "<br>"
-        + "<select class=\"verdict-select\" data-verdict=\"" + esc(c.case_id) + "\">"
-        + options + "</select>"
-        + "<label class=\"meta-line\">Note</label>"
-        + "<textarea class=\"verdict-note field-input\" rows=\"5\" data-note=\"" + esc(c.case_id) + "\""
-        + " placeholder=\"What specifically went right or wrong?\">" + esc(judgement.note) + "</textarea>"
+      + "<td class=\"actual-cell\">" + actual + "</td>"
+      + "<td>" + badge(verdict || "NOT JUDGED", verdictKind(verdict))
+        + (v && v.note ? "<p class=\"meta-line\">" + esc(v.note) + "</p>" : "")
         + "</td>"
       + "</tr>";
   }).join("");
 
+  let provenance;
+  if (EVAL_EVIDENCE) {
+    provenance = "<p class=\"meta-line\">Sweep "
+      + esc((EVAL_EVIDENCE.started || "").slice(0, 10))
+      + " · " + esc(EVAL_EVIDENCE.model || "unknown model")
+      + " · " + esc(EVAL_EVIDENCE.runs_per_case || "?") + " runs per case"
+      + (EVAL_EVIDENCE.git_sha ? " · commit " + esc(EVAL_EVIDENCE.git_sha) : "")
+      + "</p>";
+  } else {
+    provenance = "<div class=\"error-note\"><strong>No sweep on record.</strong><br>"
+      + "This view reads <span class=\"mono\">evals/latest.json</span>, written by"
+      + " <span class=\"mono\">test/eval-runner.js</span> and committed to the repository."
+      + " Run a sweep and commit the result to populate it."
+      + (EVIDENCE_ERROR ? "<br><span class=\"meta-line\">(" + esc(EVIDENCE_ERROR)
+          + " — opening this file directly from disk also prevents the fetch)</span>" : "")
+      + "</div>";
+  }
+
   document.getElementById("evals").innerHTML =
-    renderScoreboard()
+    provenance
+    + renderScoreboard()
     + "<div class=\"scroll-x\"><table class=\"evals-table\">"
-    + "<tr><th>Case</th><th>Expected behaviour</th><th>Actual</th><th>Verdict and note</th></tr>"
-    + rows + "</table></div>";
+    + "<tr><th>Case</th><th>Expected behaviour</th><th>Mechanical result</th><th>Human verdict</th></tr>"
+    + rows + "</table></div>"
+    + "<p class=\"boundary-note\">Pass rates are checked mechanically against the pricing"
+    + " engine — independently computed arithmetic, not the agent grading itself. The verdict"
+    + " column is a human judgement of the explanation, recorded in the repository alongside"
+    + " the raw transcripts.</p>";
 }
-
-document.addEventListener("change", function (event) {
-  const select = event.target.closest(".verdict-select");
-  if (!select) return;
-  getJudgement(select.getAttribute("data-verdict")).verdict = select.value;
-  saveEvalResults();
-  renderEvals();
-});
-
-/* Notes save as you type. Re-rendering on every keystroke would move the
-   caret, so only the stored value changes here. */
-document.addEventListener("input", function (event) {
-  const note = event.target.closest(".verdict-note");
-  if (!note) return;
-  getJudgement(note.getAttribute("data-note")).note = note.value;
-  saveEvalResults();
-});
 
 /* Two views, one at a time: the working console, and the evals scoreboard. */
 let VIEW = "console";
@@ -2794,7 +2793,6 @@ async function runCase(caseId) {
               caseId: caseId, runAt: new Date().toISOString() }
     };
     RUN_STATE[caseId] = { running: false, error: "" };
-    saveEvalResults();
     renderConsole();
 
     /* Every container arrives awaiting a human. Nothing is complete yet. */
@@ -2829,73 +2827,6 @@ async function runCase(caseId) {
   }
 
   return outcome;
-}
-
-/* ------------------------------------------------------------------
-   RUN ALL — every case in sequence, one after another.
-
-   Sequential on purpose: five parallel calls invite rate limiting, and
-   a sweep that half-fails for that reason tells you nothing about the
-   agent.
-   ------------------------------------------------------------------ */
-
-let SWEEP_RUNNING = false;
-
-function setButtonsDisabled(disabled) {
-  document.querySelectorAll(".run-btn").forEach(b => { b.disabled = disabled; });
-  const runAll = document.getElementById("run-all");
-  if (runAll) runAll.disabled = disabled;
-}
-
-async function runAll() {
-  if (SWEEP_RUNNING) return;
-  SWEEP_RUNNING = true;
-
-  const statusEl = document.getElementById("run-all-status");
-  const summaryEl = document.getElementById("run-all-summary");
-  const tally = { "OK": 0, "REFUSED-ESCALATE": 0, "ERROR": 0, "NO RESULT": 0 };
-  const perCase = [];
-
-  setButtonsDisabled(true);
-  summaryEl.innerHTML = "<p><span class=\"thinking\">Sweep in progress…</span></p>";
-
-  const startedAt = Date.now();
-  try {
-    for (let i = 0; i < EVAL_CASES.length; i++) {
-      const caseId = EVAL_CASES[i].case_id;
-      statusEl.textContent =
-        "Running " + caseId + " — case " + (i + 1) + " of " + EVAL_CASES.length + "…";
-
-      /* runCase re-enables its own button; keep the sweep locked. */
-      const outcome = await runCase(caseId);
-      setButtonsDisabled(true);
-
-      tally[outcome] = (tally[outcome] || 0) + 1;
-      perCase.push({ caseId: caseId, outcome: outcome });
-    }
-  } finally {
-    SWEEP_RUNNING = false;
-    setButtonsDisabled(false);
-  }
-
-  const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-  statusEl.textContent = "Sweep finished in " + seconds + "s.";
-
-  const rows = perCase.map(r =>
-    "<tr><td class=\"mono\">" + esc(r.caseId) + "</td><td>" + statusBadge(r.outcome) + "</td></tr>"
-  ).join("");
-
-  summaryEl.innerHTML =
-    "<div class=\"scoreboard\">"
-    + "<div class=\"stat ok\"><div class=\"n\">" + tally["OK"] + "</div><div class=\"l\">OK</div></div>"
-    + "<div class=\"stat danger\"><div class=\"n\">" + tally["REFUSED-ESCALATE"]
-    + "</div><div class=\"l\">Refused</div></div>"
-    + "<div class=\"stat warn\"><div class=\"n\">" + (tally["ERROR"] + tally["NO RESULT"])
-    + "</div><div class=\"l\">Errors</div></div>"
-    + "</div>"
-    + "<table class=\"data-table\"><tr><th>Case</th><th>Result</th></tr>" + rows + "</table>"
-    + "<p class=\"boundary-note\">This is what the agent decided. It is not a verdict &mdash;"
-    + " compare each result against its expected behaviour before scoring it.</p>";
 }
 
 /* Find the agent's block for one container, so the log can quote it. */
@@ -2975,8 +2906,6 @@ function handleGate(action, key) {
 }
 
 document.addEventListener("click", function (event) {
-  if (event.target.closest("#run-all")) { runAll(); return; }
-
   const card = event.target.closest(".case-card");
   if (card) { selectCase(card.getAttribute("data-case"), false); return; }
 
@@ -2999,7 +2928,7 @@ document.addEventListener("click", function (event) {
   }
 });
 
-loadEvalResults();
+loadEvalEvidence();
 renderConsole();
 renderRunLog();
 </script>

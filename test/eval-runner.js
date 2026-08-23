@@ -227,6 +227,150 @@ async function pool(items, size, worker) {
   return results;
 }
 
+/* ---------------- the review surface ----------------------------------
+   A sweep produces JSON. JSON is evidence, not a review surface. This
+   writes evals/report.html: self-contained, no server, committed with
+   the run it describes.
+
+   Built around one assumption — at 100 runs the bottleneck is human
+   attention, not measurement. So the report leads with what changed
+   since last time and which specific check failed most often, and keeps
+   transcripts one click away rather than on the page. Its job is to tell
+   you which three runs to read out of five hundred.
+   -------------------------------------------------------------------- */
+
+function escHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function writeReport(repo, latest, historyPath, record) {
+  const e = escHtml;
+  let history = [];
+  try {
+    history = fs.readFileSync(historyPath, "utf8").trim().split("\n")
+      .filter(Boolean).map(l => JSON.parse(l));
+  } catch (err) { /* first sweep */ }
+
+  const previous = history.length > 1 ? history[history.length - 2] : null;
+  const ids = Object.keys(latest.cases);
+
+  const rows = ids.map(id => {
+    const c = latest.cases[id];
+    const pct = Math.round(c.mechanical_rate * 100);
+    const kind = pct >= 95 ? "ok" : pct >= 80 ? "warn" : "bad";
+
+    let delta = "<span class='flat'>—</span>";
+    if (previous && typeof (previous.rates || {})[id] === "number") {
+      const d = Math.round((c.mechanical_rate - previous.rates[id]) * 100);
+      delta = d > 0 ? "<span class='up'>+" + d + "</span>"
+            : d < 0 ? "<span class='down'>" + d + "</span>"
+            : "<span class='flat'>0</span>";
+    }
+
+    const spark = history.map(h => {
+      const r = (h.rates || {})[id];
+      if (typeof r !== "number") return "";
+      return "<i style='height:" + Math.max(2, Math.round(r * 18)) + "px' title='"
+        + e(h.sweep_id) + ": " + Math.round(r * 100) + "%'></i>";
+    }).join("");
+
+    return "<tr>"
+      + "<td class='mono'>" + e(id) + "<div class='sub'>" + e(c.name) + "</div></td>"
+      + "<td class='rate'><span class='track'><span class='fill " + kind
+        + "' style='width:" + pct + "%'></span></span>"
+        + "<span class='num'>" + pct + "%</span></td>"
+      + "<td class='mono'>" + e(c.passes) + "/" + e(c.runs) + "</td>"
+      + "<td>" + delta + "</td>"
+      + "<td class='spark'>" + spark + "</td>"
+      + "<td>" + (c.top_failure ? "<span class='fail'>" + e(c.top_failure) + "</span>"
+                                : "<span class='flat'>clean</span>") + "</td>"
+      + "<td>" + (c.verdict ? e(c.verdict) : "<span class='flat'>not judged</span>")
+        + (c.note ? "<div class='sub'>" + e(c.note) + "</div>" : "") + "</td>"
+      + "</tr>";
+  }).join("");
+
+  const allFailures = {};
+  Object.keys(record.cases).forEach(id => {
+    Object.entries(record.cases[id].failures || {}).forEach(function (pair) {
+      const key = id + " · " + pair[0];
+      allFailures[key] = (allFailures[key] || 0) + pair[1];
+    });
+  });
+  const failureRows = Object.entries(allFailures)
+    .sort((a, b) => b[1] - a[1]).slice(0, 12)
+    .map(pair => "<tr><td class='mono'>" + e(pair[1]) + "×</td><td>" + e(pair[0]) + "</td></tr>")
+    .join("") || "<tr><td colspan='2' class='flat'>No failing checks in this sweep.</td></tr>";
+
+  const sweepRows = history.slice().reverse().slice(0, 12).map(h =>
+    "<tr><td class='mono'>" + e((h.started || "").slice(0, 16).replace("T", " ")) + "</td>"
+    + "<td class='mono'>" + e(h.git_sha || "—") + "</td>"
+    + "<td class='mono'>" + e(h.runs_per_case) + "</td>"
+    + "<td>" + ids.map(id => {
+        const r = (h.rates || {})[id];
+        return typeof r === "number"
+          ? "<span class='pill'>" + e(id.replace("EV-", "")) + " " + Math.round(r * 100) + "%</span>"
+          : "";
+      }).join(" ") + "</td></tr>"
+  ).join("");
+
+  const html = [
+    "<!doctype html>", "<meta charset=\"utf-8\">",
+    "<title>Freetime Broker — eval report</title>",
+    "<style>",
+    ":root{color-scheme:dark;--bg:#0d1117;--card:#161b22;--line:#30363d;--ink:#e6edf3;",
+    "--ink2:#9aa6b2;--ok:#3fb950;--warn:#d29922;--bad:#f85149}",
+    "body{margin:0;padding:32px;background:var(--bg);color:var(--ink);",
+    "font:14px/1.55 ui-sans-serif,-apple-system,Segoe UI,Roboto,sans-serif}",
+    "h1{font-size:20px;margin:0 0 4px}",
+    "h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:32px 0 10px}",
+    ".meta{color:var(--ink2);font-size:13px}",
+    ".mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}",
+    ".card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-top:12px}",
+    "table{width:100%;border-collapse:collapse}",
+    "th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;",
+    "color:var(--ink2);font-weight:600;padding:6px 10px 6px 0}",
+    "td{padding:10px 10px 10px 0;border-top:1px solid var(--line);vertical-align:top}",
+    ".sub{color:var(--ink2);font-size:12px;margin-top:2px}",
+    ".rate{min-width:190px}",
+    ".track{display:inline-block;width:130px;height:8px;border-radius:99px;background:#21262d;",
+    "overflow:hidden;vertical-align:middle}",
+    ".fill{display:block;height:100%}",
+    ".fill.ok{background:var(--ok)}.fill.warn{background:var(--warn)}.fill.bad{background:var(--bad)}",
+    ".num{margin-left:8px;font-family:ui-monospace,monospace}",
+    ".up{color:var(--ok)}.down{color:var(--bad)}.flat{color:var(--ink2)}.fail{color:var(--warn)}",
+    ".spark{white-space:nowrap}",
+    ".spark i{display:inline-block;width:5px;margin-right:2px;background:#3b82f6;border-radius:1px;vertical-align:bottom}",
+    ".pill{display:inline-block;padding:1px 7px;border-radius:99px;background:#21262d;",
+    "color:var(--ink2);font-size:12px;font-family:ui-monospace,monospace}",
+    ".note{color:var(--ink2);font-size:13px;border-left:2px solid var(--line);padding-left:12px;margin-top:16px}",
+    "</style>",
+    "<h1>Freetime Broker — eval report</h1>",
+    "<p class=\"meta\">Sweep " + e((latest.started || "").slice(0, 16).replace("T", " "))
+      + " · " + e(latest.model) + " · " + e(latest.runs_per_case) + " runs per case"
+      + " · commit <span class=\"mono\">" + e(latest.git_sha || "unknown") + "</span></p>",
+    "<h2>This sweep</h2><div class=\"card\"><table>",
+    "<tr><th>Case</th><th>Mechanical rate</th><th>Clean</th><th>&Delta;</th>",
+    "<th>History</th><th>Most common failure</th><th>Your verdict</th></tr>",
+    rows,
+    "</table><p class=\"note\">Mechanical checks compare the model's output against the pricing",
+    "engine — independently computed arithmetic, not the agent grading itself. They do not judge",
+    "whether the explanation is any good. That is the verdict column, and it is yours.</p></div>",
+    "<h2>Where to look first</h2><div class=\"card\"><table>",
+    "<tr><th>Count</th><th>Failing check</th></tr>", failureRows, "</table>",
+    "<p class=\"note\">Ranked by frequency across every run in this sweep. At 100 runs per case you",
+    "cannot read 500 transcripts — this is the list that says which handful to open. Full",
+    "transcripts: <span class=\"mono\">" + e(latest.source || "evals/runs/") + "</span></p></div>",
+    "<h2>Memory — every sweep on record</h2><div class=\"card\"><table>",
+    "<tr><th>When</th><th>Commit</th><th>Runs</th><th>Rates</th></tr>", sweepRows, "</table>",
+    "<p class=\"note\">Each sweep is tied to the commit that produced it. A pass rate without the",
+    "code behind it is a statistic; with it, it is a record of cause and effect.</p></div>"
+  ].join("\n");
+
+  fs.writeFileSync(path.join(repo, "evals", "report.html"), html);
+}
+
 /* ---------------- self-test ----------------
    Proves the checks above actually catch the failure they were written
    for, by replaying the recorded EV-03 bug: every figure correct, the
@@ -341,7 +485,21 @@ function selfTest() {
   console.log("Model: " + MODEL_ID + " · " + cases.length + " case(s) × " + RUNS +
               " runs · concurrency " + CONCURRENCY + "\n");
 
-  const record = { started: started.toISOString(), model: MODEL_ID, runs_per_case: RUNS, cases: {} };
+  /* Which commit produced these numbers. A pass rate without the code that
+     produced it is a statistic; with it, it is evidence. This one field is
+     what turns history.jsonl into a record of cause and effect. */
+  const gitSha = (function () {
+    try {
+      return require("child_process")
+        .execSync("git rev-parse --short HEAD", { cwd: REPO, stdio: ["ignore", "pipe", "ignore"] })
+        .toString().trim();
+    } catch (e) { return null; }
+  })();
+
+  const record = {
+    started: started.toISOString(), model: MODEL_ID, runs_per_case: RUNS,
+    git_sha: gitSha, cases: {}
+  };
   const summary = [];
 
   for (const evalCase of cases) {
@@ -378,11 +536,17 @@ function selfTest() {
                 (errored ? "  (" + errored + " API error(s))" : ""));
     worst.forEach(([name, n]) => console.log("        " + n + "x  " + name));
 
+    const topFailure = worst.length ? worst[0][0] : null;
+
     summary.push({ id: evalCase.case_id, name: evalCase.case_name, passes, rate, errored, worst });
     record.cases[evalCase.case_id] = {
       name: evalCase.case_name,
       expected_status: evalCase.expected_status,
       passes, runs: RUNS, rate,
+      mechanical_rate: passes / RUNS,
+      top_failure: topFailure,
+      verdict: "",                 /* filled in by hand — see evals/RESULTS.md */
+      note: "",
       failures: failCounts,
       raw: results.map(r => r.ok ? { passed: r.passed, text: r.text, usage: r.usage }
                                  : { passed: false, error: r.error })
@@ -403,12 +567,66 @@ function selfTest() {
   console.log("-".repeat(58));
   console.log("\nRaw outputs: " + path.relative(REPO, outFile));
 
+  /* ---- latest.json — what the product's Evals tab reads ----------------
+     Deliberately WITHOUT the raw transcripts: the page needs rates and
+     provenance, not several megabytes of model output. The transcripts
+     stay in evals/runs/ where the report and a human can reach them. */
+  const latest = {
+    started: record.started, model: record.model, git_sha: record.git_sha,
+    runs_per_case: record.runs_per_case, source: path.relative(REPO, outFile),
+    cases: {}
+  };
+  Object.keys(record.cases).forEach(id => {
+    const c = record.cases[id];
+    latest.cases[id] = {
+      name: c.name, passes: c.passes, runs: c.runs,
+      mechanical_rate: c.mechanical_rate, top_failure: c.top_failure,
+      verdict: c.verdict, note: c.note
+    };
+  });
+  const latestPath = path.join(REPO, "evals", "latest.json");
+  fs.writeFileSync(latestPath, JSON.stringify(latest, null, 2));
+
+  /* ---- history.jsonl — memory across sweeps ---------------------------
+     Append-only, one line per sweep, each tied to the commit that
+     produced it. This is what makes "EV-03 went 12% -> 94%" a claim about
+     a specific change rather than a number with no cause. */
+  const historyPath = path.join(REPO, "evals", "history.jsonl");
+  const historyLine = JSON.stringify({
+    sweep_id: stamp, started: record.started, git_sha: record.git_sha,
+    model: record.model, runs_per_case: RUNS,
+    rates: summary.reduce((acc, s) => { acc[s.id] = s.passes / RUNS; return acc; }, {}),
+    source: path.relative(REPO, outFile)
+  });
+  fs.appendFileSync(historyPath, historyLine + "\n");
+
+  /* ---- previous sweep, for the delta ---- */
+  let previous = null;
+  try {
+    const lines = fs.readFileSync(historyPath, "utf8").trim().split("\n").filter(Boolean);
+    if (lines.length > 1) previous = JSON.parse(lines[lines.length - 2]);
+  } catch (e) { /* first sweep */ }
+
+  if (previous) {
+    console.log("\nAgainst the previous sweep (" + (previous.git_sha || "unknown commit") + "):");
+    summary.forEach(s => {
+      const before = previous.rates && previous.rates[s.id];
+      if (typeof before !== "number") return;
+      const delta = Math.round((s.passes / RUNS - before) * 100);
+      const arrow = delta > 0 ? "up " + delta : delta < 0 ? "down " + Math.abs(delta) : "unchanged";
+      console.log("  " + s.id.padEnd(8) + Math.round(before * 100) + "% -> " + s.rate + "%  " + arrow);
+    });
+  }
+
+  writeReport(REPO, latest, historyPath, record);
+
   /* ---- results stub for the human verdicts ---- */
   const resultsPath = path.join(REPO, "evals", "RESULTS.md");
   const block = [
     "## Sweep " + started.toISOString().slice(0, 10) + " · " + MODEL_ID + " · " + RUNS + " runs per case",
     "",
-    "Mechanical pass rate is checked automatically against the pricing engine.",
+    (record.git_sha ? "Commit `" + record.git_sha + "`. " : "")
+      + "Mechanical pass rate is checked automatically against the pricing engine.",
     "The verdict column is a human judgement of the explanation and is filled in by hand.",
     "",
     "| Case | Mechanical | Verdict | Note |",
@@ -438,7 +656,11 @@ function selfTest() {
   const tail = existing.indexOf(marker) === -1 ? "" : existing.slice(existing.indexOf(marker) + 1);
   fs.writeFileSync(resultsPath, head + "\n" + block + "\n" + tail);
 
-  console.log("Scoreboard:  evals/RESULTS.md   (verdict column is yours to fill in)");
+  console.log("\nWritten:");
+  console.log("  evals/latest.json      <- the product's Evals tab reads this");
+  console.log("  evals/history.jsonl    <- one line per sweep, tied to a commit");
+  console.log("  evals/report.html      <- open this to review");
+  console.log("  evals/RESULTS.md       <- verdict column is yours to fill in");
 })().catch(err => {
   console.error("\n" + err.stack || err);
   process.exit(1);

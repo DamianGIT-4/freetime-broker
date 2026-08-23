@@ -180,6 +180,30 @@ That split isn't a UI convenience — `WP-7` already draws exactly this line: *"
 
 Lanes cap their visible rows and collapse the tail into a count, so the left rail stays the same height at 6 containers or 60. And each warehouse header now leads with **euro exposure** rather than occupancy — occupancy is a warehouse statistic, exposure is what the operator is actually managing. Refused containers contribute nothing to that total, because the engine has no contractual basis to price them and inventing a figure to complete the header is the exact failure the refusal exists to prevent.
 
+## The Evals tab stopped being a control panel
+
+It used to run cases and take hand-typed verdicts stored in `localStorage`. Three things were wrong with that.
+
+**It was developer tooling inside an operator's product** — the same category error the console had before it was rebuilt around warehouses.
+
+**It went stale and could not tell.** Verdicts were seeded from a hardcoded object recorded on 6 August. After the pricing engine landed, that object still reported EV-03 as a *Fail* on a case the engine had fixed. The screen was confidently wrong about the project's own work, and nothing in the product could notice.
+
+**It was weak evidence.** One run, in one browser, judged by hand, stored where nobody else can read it. `test/eval-runner.js` gives pass *rates* over N runs, checked mechanically against the pricing engine, written into the repository as versioned files. Strictly better at the same job.
+
+So measuring moved to the CLI and the tab became a read-only view of committed evidence. It fetches `evals/latest.json` and renders rates, provenance and the recorded human verdict. **Nothing on it can go stale, because nothing on it is typed.** When there is no sweep it says so, rather than showing a number that reads as current.
+
+### Memory
+
+Every sweep appends a line to `evals/history.jsonl`, and each line carries the **commit that produced it**. That one field is what makes *"EV-03 went 12% → 94%"* a claim about a specific change rather than a number with no cause. The runner prints the delta against the previous sweep, and the report draws a sparkline per case across every sweep on record.
+
+### The review surface
+
+JSON is evidence, not a review surface. Each sweep also writes `evals/report.html` — self-contained, no server, committed alongside the run it describes.
+
+It is built around one assumption: **at 100 runs the bottleneck is human attention, not measurement.** Nobody reads 500 transcripts. So the report leads with what changed since last time, then ranks every failing check by frequency — the list that says which handful of runs to actually open. Transcripts stay one click away rather than on the page.
+
+That is also why `latest.json` deliberately excludes the raw transcripts: the product needs rates and provenance, not megabytes of model output. The transcripts live in `evals/runs/` where the report and a human can reach them.
+
 ## The general lesson
 
 The reliable half of this agent was always the judgement half — spotting that data contradicts itself, recognising that a contracted carrier supplying an uncontracted unit type is still out of contract, and explaining why in language a person can check. Those are genuinely hard, and the model did them correctly on every run.
