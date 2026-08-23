@@ -155,11 +155,14 @@ body {
 /* ═══ WAREHOUSE REVIEW (console left column) — Lana's actual unit of
    work is a warehouse's containers, not a named test scenario. ═══ */
 .warehouse-section { margin-bottom: var(--sp-4); }
-.warehouse-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-.warehouse-name { font-weight: 700; }
+/* Name + occupancy badge on their own row, exposure on the row below.
+   Three elements sharing one row wrapped mid-word in the sidebar's ~260px
+   — two short rows, nothing squeezed, nothing wraps. */
+.warehouse-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-1); }
+.warehouse-name { font-weight: 700; white-space: nowrap; }
 .warehouse-exposure {
-  margin-left: auto; font-family: var(--font-mono);
-  font-size: var(--fs-0); color: var(--ink-2);
+  display: block; margin-bottom: var(--sp-2); font-family: var(--font-mono);
+  font-size: var(--fs-0); color: var(--ink-2); white-space: nowrap;
 }
 .container-row {
   font-size: var(--fs-0); color: var(--ink-2);
@@ -208,7 +211,7 @@ details.routine summary { color: var(--ink-3); }
 /* ═══ STATUS BADGES ═══ */
 .badge {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 10px; border-radius: 999px;
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
   font-size: var(--fs-0); font-weight: 700; letter-spacing: .04em;
 }
 .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -415,7 +418,7 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
   <div class="stack">
     <section class="panel">
       <div class="panel-head">This week's review</div>
-      <div class="panel-body" id="warehouse-list"></div>
+      <div class="panel-body"><div id="warehouse-list"></div></div>
     </section>
 
     <section class="panel">
@@ -1177,10 +1180,10 @@ function renderWarehouseList() {
       + (occ !== null && info
           ? " " + badge(occ + "% · " + esc(info.band), occ >= 80 ? "danger" : occ >= 70 ? "warn" : "ok")
           : "")
+      + "</div>"
       + (exposure > 0
           ? "<span class=\"warehouse-exposure\">" + formatEur(exposure) + " at stake</span>"
-          : "")
-      + "</div>";
+          : "");
 
     if (!review.length) {
       block += "<p class=\"muted\">Nothing awaiting review — every container here already"
