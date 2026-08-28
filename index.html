@@ -208,6 +208,19 @@ details.routine summary { color: var(--ink-3); }
 .field .v { color: var(--ink); }
 .field .v.why { color: var(--ink-2); font-style: italic; }
 
+/* ═══ LEVER COMPARISON — OPTIONS drawn from the engine's own numbers ═══ */
+.lever-compare { display: flex; flex-direction: column; gap: var(--sp-3); }
+.lever-row { display: flex; flex-direction: column; gap: var(--sp-1); }
+.lever-head { display: flex; align-items: center; gap: var(--sp-2); }
+.lever-name { font-weight: 700; color: var(--ink); text-transform: capitalize; }
+.lever-amount { margin-left: auto; font-weight: 700; color: var(--ink); }
+.lever-bar-track { height: 8px; border-radius: 999px; background: var(--bg-inset); overflow: hidden; }
+.lever-bar { height: 100%; border-radius: 999px; background: var(--ink-3); }
+.lever-row.is-cheapest .lever-bar { background: var(--ok); }
+.lever-row.is-tied .lever-bar { background: var(--warn); }
+.lever-row.is-unavailable .lever-name { color: var(--ink-3); }
+.lever-reason { color: var(--ink-3); font-size: var(--fs-0); }
+
 /* ═══ STATUS BADGES ═══ */
 .badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1298,6 +1311,7 @@ function renderMain() {
   const ids = caseScope(c);
   const found = ids.map(findContainer).filter(Boolean);
   const missing = ids.filter(id => !findContainer(id));
+  const pricing = computePricing(c);
   const state = RUN_STATE[SELECTED_CASE] || {};
   const stored = RESULTS[SELECTED_CASE];
   const isReview = isWarehouseReview(SELECTED_CASE);
@@ -1335,7 +1349,15 @@ function renderMain() {
   if (missing.length) {
     html += "<div class=\"error-note\">Missing from the yard roster: " + esc(missing.join(", ")) + "</div>";
   }
-  html += table(found);
+  /* The raw CSV has 16 columns, wider than this panel. Left to the CSV's
+     own order, the fields an operator actually needs to spot-check a
+     decision — days_left, free_time_expiry, discharge_confirmed — sit
+     off past a horizontal scrollbar most people never touch. Put those
+     first; the rest are still one scroll away, not deleted. */
+  html += table(found, ["container_id", "carrier", "container_type", "days_left",
+    "free_time_expiry", "booked_return_date", "next_standard_slot",
+    "discharge_confirmed", "warehouse", "arrival_date", "free_time_start",
+    "free_time_days", "yard_slot", "status", "dnd_days_accrued", "notes"]);
   html += "<p>" + POLICY_FILES.map(p => "<span class=\"chip cite\">" + esc(p.name) + "</span>").join(" ")
        + " <span class=\"chip cite\">" + esc(c.warehouse) + " roster</span>"
        + " <span class=\"chip cite\">week's arrivals</span></p>";
@@ -1371,7 +1393,7 @@ function renderMain() {
 
   /* ── 4 OUTPUT ── */
   html += stage(4, "Output", "Every field labeled, so a person can judge it in under a minute.");
-  html += stored ? renderOutputFields(stored.parsed, stored.meta) : waiting;
+  html += stored ? renderOutputFields(stored.parsed, stored.meta, pricing) : waiting;
 
   /* ── 5 REVIEW ── */
   html += stage(5, "Review", "Nothing is committed until a person approves, edits, or escalates it.");
@@ -2583,7 +2605,7 @@ function agentDecisionSummary(fields) {
    RENDERING THE AGENT'S OUTPUT — every field with its label.
    ------------------------------------------------------------------ */
 
-function renderFieldRows(fields, decision) {
+function renderFieldRows(fields, decision, pricingEntry) {
   const edits = { RECOMMENDATION: decision.recommendation, "RETURN DAY": decision.returnDay };
 
   return AGENT_FIELDS.map(label => {
@@ -2594,7 +2616,13 @@ function renderFieldRows(fields, decision) {
     let shown;
     let cls = "v";
 
-    if (label === "STATUS") {
+    const comparison = label === "OPTIONS" && pricingEntry && !pricingEntry.refuse
+      ? renderOptionsComparison(pricingEntry.priced)
+      : null;
+
+    if (comparison) {
+      shown = comparison;
+    } else if (label === "STATUS") {
       shown = statusBadge(fields._status);
     } else if (wasEdited) {
       shown = esc(edited)
@@ -2744,7 +2772,7 @@ function renderDecision(parsed, meta) {
 }
 
 /* ── STAGE 4 · OUTPUT — every field labeled, plus checked citations ── */
-function renderOutputFields(parsed, meta) {
+function renderOutputFields(parsed, meta, pricing) {
   if (!parsed.blocks.length) {
     return "<p class=\"muted\">No labeled fields were returned.</p>";
   }
@@ -2758,11 +2786,51 @@ function renderOutputFields(parsed, meta) {
   parsed.blocks.forEach(fields => {
     const label = fields.CONTAINER || "(no container id)";
     const decision = getDecision(decisionKey(meta.caseId, label));
-    html += renderFieldRows(fields, decision);
+    const entry = pricing && pricing.scoped.find(e => e.container.container_id === label);
+    html += renderFieldRows(fields, decision, entry);
     html += renderCitationTags(fields);
   });
 
   return html;
+}
+
+/* OPTIONS used to be the model's own prose restating figures it was handed
+   — readable, but a re-derivation of numbers the engine already computed
+   exactly, and one more place a transcription slip could hide. This reads
+   the same priceLevers() output the model was given (see priced.levers in
+   computePricing()) and draws it directly, so the bars can never disagree
+   with the number the model was told to transcribe. */
+function renderOptionsComparison(priced) {
+  if (!priced) return null;
+  if (priced.unpriceable) {
+    return "<p class=\"muted\">NOT PRICEABLE — " + esc(priced.unpriceable) + "</p>";
+  }
+
+  const maxTotal = priced.levers.reduce((m, l) => l.available ? Math.max(m, l.total) : m, 0) || 1;
+
+  const rows = priced.levers.map(l => {
+    if (!l.available) {
+      return "<div class=\"lever-row is-unavailable\">"
+        + "<div class=\"lever-head\"><span class=\"lever-name\">" + esc(l.name) + "</span></div>"
+        + "<div class=\"lever-reason\">UNAVAILABLE — " + esc(l.reason) + "</div>"
+        + "</div>";
+    }
+
+    const tied = priced.tie && priced.tie.indexOf(l.name) !== -1;
+    const isCheapest = !priced.tie && priced.cheapest && l.name === priced.cheapest.name;
+    const pct = Math.max(6, Math.round((l.total / maxTotal) * 100));
+
+    return "<div class=\"lever-row" + (isCheapest ? " is-cheapest" : "") + (tied ? " is-tied" : "") + "\">"
+      + "<div class=\"lever-head\"><span class=\"lever-name\">" + esc(l.name) + "</span>"
+      + (isCheapest ? " <span class=\"badge ok\">CHEAPEST</span>" : "")
+      + (tied ? " <span class=\"badge warn\">TIE</span>" : "")
+      + "<span class=\"lever-amount\">" + formatEur(l.total) + "</span></div>"
+      + "<div class=\"lever-bar-track\"><div class=\"lever-bar\" style=\"width:" + pct + "%\"></div></div>"
+      + "<div class=\"lever-working meta-line\">" + esc(l.working) + "</div>"
+      + "</div>";
+  }).join("");
+
+  return "<div class=\"lever-compare\">" + rows + "</div>";
 }
 
 /* ── STAGE 5 · REVIEW — the human gate, one decision per container ── */

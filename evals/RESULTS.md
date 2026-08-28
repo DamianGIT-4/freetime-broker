@@ -35,25 +35,22 @@ node test/allocator-test.js index.html   # 240 assertions — scale invariants
 Those prove the figures are right. They do not prove the model narrates them correctly — that is what a sweep measures, and none has been run since these changes landed.
 
 
+
 ## Sweep 2026-08-23 · claude-sonnet-4-5 · 5 runs per case · re-scored
 
 Commit `9a238b4`. Mechanical pass rate is checked automatically against the pricing engine.
 The verdict column is a human judgement of the explanation and is filled in by hand.
 
+Manually consolidated 2026-08-28 — this run originally scored 100% (5/5); a spot-check of
+one transcript found `WAREHOUSE SUMMARY`'s stated exposure wrong while `OPTIONS` and
+`RECOMMENDATION` were correct, a mechanical check for it was added, and the honest re-score
+below is what stands. See HANDOFF.md for the full account. (The `--rescore` tool previously
+recorded this as two separate blocks for the same run; it now updates one block in place —
+see `finalizeSweep()` in `test/eval-runner.js`.)
+
 | Case | Mechanical | Verdict | Note |
 |---|---|---|---|
 | EV-03 | 20% (1/5) | | |
-
-Raw outputs: `evals/runs/2026-08-23T12-57-15.json`
-
-## Sweep 2026-08-23 · claude-sonnet-4-5 · 5 runs per case
-
-Commit `9a238b4`. Mechanical pass rate is checked automatically against the pricing engine.
-The verdict column is a human judgement of the explanation and is filled in by hand.
-
-| Case | Mechanical | Verdict | Note |
-|---|---|---|---|
-| EV-03 | 100% (5/5) | | |
 
 Raw outputs: `evals/runs/2026-08-23T12-57-15.json`
 

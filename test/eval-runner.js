@@ -494,6 +494,17 @@ function finalizeSweep(ctx) {
 
   writeReport(repo, latest, historyPath, record);
 
+  /* Matches a "| EV-03 | 100% (5/5) | ... | ... |" row and nothing else.
+     The naive version of this also matched the header ("| Case | ... |")
+     and the "|---|---|---|---|" separator, both of which look exactly
+     like a 4-cell row — found by inspection: it silently reformatted the
+     separator into "| --- | --- | --- | --- |" on every rescore. */
+  function matchDataRow(line) {
+    const m = line.match(/^\|\s*(\S+)\s*\|([^|]*)\|([^|]*)\|([^|]*)\|\s*$/);
+    if (!m || m[1] === "Case" || /^-+$/.test(m[1])) return null;
+    return m;
+  }
+
   /* ---- results stub for the human verdicts ---- */
   const resultsPath = path.join(repo, "evals", "RESULTS.md");
   const block = [
@@ -528,8 +539,44 @@ function finalizeSweep(ctx) {
   }
   const marker = "\n## Sweep ";
   const head = existing.indexOf(marker) === -1 ? existing : existing.slice(0, existing.indexOf(marker) + 1);
-  const tail = existing.indexOf(marker) === -1 ? "" : existing.slice(existing.indexOf(marker) + 1);
-  fs.writeFileSync(resultsPath, head + "\n" + block + "\n" + tail);
+  const rest = existing.indexOf(marker) === -1 ? "" : existing.slice(existing.indexOf(marker) + 1);
+  const blocks = rest ? rest.split(/\n(?=## Sweep )/) : [];
+
+  /* --rescore re-grades a run already on disk (see the --rescore flag
+     above) — it is the same evidence, checked again, not a new sweep.
+     Found for real on the EV-03 spot check: prepending unconditionally
+     left RESULTS.md with two blocks for one run (100% then 20% below
+     it), reading as two sweeps when only one ever happened. A rescore
+     of a file already recorded here now updates that one block in
+     place instead. Per case, a hand-filled verdict/note carries
+     forward only if the mechanical rate for that case is unchanged —
+     exactly the EV-03 case, where the rate moved, must force a fresh
+     look rather than keep a verdict written for a wrong number. */
+  const rawOutputsLine = "Raw outputs: `" + path.relative(repo, outFile) + "`";
+  const matchIndex = rescored ? blocks.findIndex(b => b.indexOf(rawOutputsLine) !== -1) : -1;
+
+  let newBlock = block;
+  if (matchIndex !== -1) {
+    const priorRows = {};
+    blocks[matchIndex].split("\n").forEach(line => {
+      const m = matchDataRow(line);
+      if (m) priorRows[m[1]] = { rate: m[2].trim(), verdict: m[3].trim(), note: m[4].trim() };
+    });
+    newBlock = block.split("\n").map(line => {
+      const m = matchDataRow(line);
+      if (!m) return line;
+      const prior = priorRows[m[1]];
+      if (!prior || prior.rate !== m[2].trim() || (!prior.verdict && !prior.note)) return line;
+      return "| " + m[1] + " | " + m[2].trim() + " | " + prior.verdict + " | " + prior.note + " |";
+    }).join("\n");
+  }
+
+  if (matchIndex !== -1) {
+    blocks[matchIndex] = newBlock;
+  } else {
+    blocks.unshift(newBlock);
+  }
+  fs.writeFileSync(resultsPath, head + "\n" + blocks.join("\n"));
 
   console.log("\nWritten:");
   console.log("  evals/latest.json      <- the product's Evals tab reads this");
