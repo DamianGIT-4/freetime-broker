@@ -126,6 +126,14 @@ body {
   font-size: var(--fs-0); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
   color: var(--ink-2);
 }
+/* Second line of a panel head: what the panel holds stays in the tracked
+   uppercase label, the timeframe drops to sentence case underneath. Keeps
+   the label short enough to read at .12em tracking in a narrow column. */
+.panel-head .sub {
+  display: block; margin-top: 3px;
+  font-size: var(--fs-0); font-weight: 400; letter-spacing: .04em;
+  text-transform: none; color: var(--ink-3);
+}
 .panel-body { padding: var(--sp-4); }
 
 /* ═══ STAGE LABELS — the loop, named on screen ═══ */
@@ -158,8 +166,17 @@ body {
 /* Name + occupancy badge on their own row, exposure on the row below.
    Three elements sharing one row wrapped mid-word in the sidebar's ~260px
    — two short rows, nothing squeezed, nothing wraps. */
-.warehouse-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-1); }
+.warehouse-head {
+  display: flex; align-items: center; gap: var(--sp-2);
+  margin-bottom: var(--sp-1); flex-wrap: wrap;
+}
 .warehouse-name { font-weight: 700; white-space: nowrap; }
+/* The id the agent actually cites, kept beside the human name rather
+   than replaced by it — see warehouseLabel(). */
+.wh-id {
+  font-family: var(--font-mono); font-size: var(--fs-0);
+  color: var(--ink-3); white-space: nowrap;
+}
 .warehouse-exposure {
   display: block; margin-bottom: var(--sp-2); font-family: var(--font-mono);
   font-size: var(--fs-0); color: var(--ink-2); white-space: nowrap;
@@ -512,7 +529,7 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
 
   <div class="stack">
     <section class="panel">
-      <div class="panel-head">This week's review</div>
+      <div class="panel-head">Warehouses<span class="sub">Weekly review · Mon 3 Aug 2026</span></div>
       <div class="panel-body"><div id="warehouse-list"></div></div>
     </section>
 
@@ -1143,9 +1160,19 @@ const WAREHOUSES = Array.from(new Set(CONTAINERS_INYARD.map(c => c.warehouse))).
    drift risk already documented for CONTRACTS and MOVE_CAP: if the
    policy file changes and this does not, the two disagree silently. */
 const WAREHOUSE_INFO = {
-  "WH-BCN": { slots: 180, occupied: 151, band: "At-risk" },
-  "WH-VLC": { slots: 240, occupied: 118, band: "Healthy" }
+  "WH-BCN": { slots: 180, occupied: 151, band: "At-risk", city: "Barcelona" },
+  "WH-VLC": { slots: 240, occupied: 118, band: "Healthy", city: "Valencia" }
 };
+
+/* Display label only. The id stays WH-BCN everywhere that matters — the
+   warehouse column of every CSV row, the WP-1 policy table, the eval
+   cases, and the SOURCES citations the agent writes back — so the id is
+   always shown next to the city rather than replaced by it. A reader
+   who sees WH-BCN in a citation has to be able to find it on screen. */
+function warehouseLabel(wh) {
+  const info = WAREHOUSE_INFO[wh];
+  return info && info.city ? info.city : wh;
+}
 function warehouseOccupancy(wh) {
   const info = WAREHOUSE_INFO[wh];
   return info ? Math.round((info.occupied / info.slots) * 100) : null;
@@ -1308,10 +1335,15 @@ function renderWarehouseList() {
     const occKind = occ >= 80 ? "danger" : occ >= 70 ? "warn" : "ok";
 
     let block = "<div class=\"warehouse-section\">"
-      + "<div class=\"warehouse-head\"><span class=\"warehouse-name\">" + esc(wh) + "</span>"
-      + (occ !== null && info
-          ? " " + badge(occ + "% · " + esc(info.band), occKind)
-          : "")
+      + "<div class=\"warehouse-head\">"
+      + "<span class=\"warehouse-name\">" + esc(warehouseLabel(wh)) + "</span>"
+      + "<span class=\"wh-id\">" + esc(wh) + "</span>"
+      /* Band only. The percentage used to sit here too, but it is already
+         the width of the bar below and now reads numerically beside it —
+         three copies of one number, and the third pushed the badge onto
+         its own line, which cost enough height to drop the second
+         warehouse below the fold. */
+      + (occ !== null && info ? " " + badge(esc(info.band), occKind) : "")
       + "</div>";
 
     /* Occupancy as a bar, not only a number. How full the yard is is the
@@ -1321,7 +1353,8 @@ function renderWarehouseList() {
       block += "<div class=\"occ\" title=\"" + info.occupied + " of " + info.slots + " slots\">"
         + "<div class=\"occ-track\"><div class=\"occ-fill " + occKind
         + "\" style=\"width:" + occ + "%\"></div></div>"
-        + "<span class=\"occ-num\">" + info.occupied + "/" + info.slots + "</span></div>";
+        + "<span class=\"occ-num\">" + occ + "% · " + info.occupied + "/" + info.slots
+        + "</span></div>";
     }
 
     block += (exposure > 0
@@ -1445,7 +1478,8 @@ function renderMain() {
   const isReview = isWarehouseReview(SELECTED_CASE);
 
   head.innerHTML = isReview
-    ? "This week's review · " + esc(c.warehouse)
+    ? esc(warehouseLabel(c.warehouse)) + " · " + esc(c.warehouse)
+      + "<span class=\"sub\">Weekly review · Mon 3 Aug 2026</span>"
     : esc(c.case_id) + " · " + esc(c.case_name);
 
   /* All five stages are drawn every time, whether or not the case has run.
@@ -1457,9 +1491,10 @@ function renderMain() {
 
   /* ── 1 INPUT ── */
   if (isReview) {
-    html += stage(1, "Input", "Every container in " + esc(c.warehouse) + " with no return"
+    html += stage(1, "Input", "Every container in " + warehouseLabel(c.warehouse) + " with no return"
          + " booked yet — the actual week, not a hand-picked scenario.");
-    html += "<p class=\"meta-line\">" + esc(c.warehouse) + " · " + found.length
+    html += "<p class=\"meta-line\">" + esc(warehouseLabel(c.warehouse)) + " · "
+         + esc(c.warehouse) + " · " + found.length
          + " container(s) awaiting review</p>";
   } else {
     html += stage(1, "Input", "The case Lana is reviewing this week. Picked here, not typed by the agent.");
