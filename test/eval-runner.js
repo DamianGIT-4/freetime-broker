@@ -189,12 +189,14 @@ function checkRun(evalCase, pricing, parsed) {
   /* WAREHOUSE SUMMARY's exposure figure is free text — nothing constrains it
      to agree with the per-container totals the engine actually computed.
      Found by inspection: on a real EV-03 sweep, 4 of 5 runs stated 800 EUR
-     while every RECOMMENDATION correctly said 600. The mechanical checks
-     above only look inside each container's own block, so that run still
-     passed 5/5 clean. Checked here: the summary's total should equal the
-     sum of the engine's cheapest lever across every non-refused container
-     in scope — a number the model never had to compute itself, since it
-     was handed the pieces in the pricing brief. */
+     while every RECOMMENDATION correctly said 600, because the brief only
+     gave the model each container's CHEAPEST and left it to add them up.
+     The mechanical checks above only look inside each container's own
+     block, so that run still passed 5/5 clean. The brief now hands the
+     model a pre-summed TOTAL WAREHOUSE EXPOSURE figure to transcribe
+     instead — checked here against the same sum computed independently,
+     so a model that ignores the instruction and recalculates anyway still
+     gets caught. */
   const engineExposure = pricing.scoped.reduce((sum, e) =>
     sum + (!e.refuse && e.priced && e.priced.cheapest ? e.priced.cheapest.total : 0), 0);
   if (engineExposure > 0) {

@@ -835,7 +835,7 @@ const SYSTEM_PROMPT = [
 "",
 "WORKING",
 "You do not do arithmetic. The application has already done it.",
-"Every request carries a PRE-COMPUTED PRICING section produced by application code directly from the policy files: the overrun in days, each lever priced on one basis, which lever is cheapest, and how any contested move slot was allocated. Those figures are deterministic and correct. Transcribe them. Never recalculate, never adjust, never substitute a total of your own, and never contradict them.",
+"Every request carries a PRE-COMPUTED PRICING section produced by application code directly from the policy files: the overrun in days, each lever priced on one basis, which lever is cheapest, how any contested move slot was allocated, and the total warehouse exposure already summed across every priced container. Those figures are deterministic and correct. Transcribe them. Never recalculate, never adjust, never substitute a total of your own, and never contradict them.",
 "",
 "Your job is the part code cannot do: decide whether the situation is coherent, apply the policy boundaries, and explain the decision in language a person can check.",
 "",
@@ -845,6 +845,7 @@ const SYSTEM_PROMPT = [
 "3. RECOMMENDATION must name whatever the engine marks CHEAPEST, at the exact figure given. If the engine reports a TIE, escalate rather than pick, as XV-4 requires.",
 "4. COUNTS is transcription, not calculation: write the counts and thresholds shown in the brief. You may not fire a threshold trigger the brief does not show as met. Three containers is not five.",
 "5. OPTIONS is transcription too: list every lever exactly as priced, including the unavailable ones with the reason the engine gave, then the cheapest. Do not drop a lever, do not re-price one, do not invent an obstacle that is not in the brief.",
+"6. The WAREHOUSE SUMMARY total euro exposure is the TOTAL WAREHOUSE EXPOSURE figure given in the brief, transcribed exactly. Do not add up the containers' CHEAPEST figures yourself and do not substitute a total of your own — the brief has already summed them.",
 "",
 "If the brief and the raw CSV appear to disagree, the brief is authoritative on arithmetic and you say nothing about the discrepancy. If a container is genuinely incoherent — two fields contradicting each other in a way no price can resolve — the engine will have flagged it for you already.",
 "",
@@ -856,7 +857,7 @@ const SYSTEM_PROMPT = [
 "Never omit a field. If a field does not apply, write NONE.",
 "",
 "Start with exactly one summary line:",
-"WAREHOUSE SUMMARY: <warehouse id, occupancy percent and band, how many containers reviewed, how many at risk, how many escalated, total euro exposure at stake>",
+"WAREHOUSE SUMMARY: <warehouse id, occupancy percent and band, how many containers reviewed, how many at risk, how many escalated, total euro exposure at stake — transcribed from TOTAL WAREHOUSE EXPOSURE in the brief, not summed by you>",
 "",
 "Then one block per container. Separate blocks with a line containing only three hyphens.",
 "Give every container in CONTAINERS UNDER REVIEW its own block, in the order listed.",
@@ -2132,6 +2133,19 @@ function renderPricingBrief(pricing) {
     lines.push("SLOT ALLOCATION: no contested move slots among the containers under review.");
     lines.push("");
   }
+
+  /* WAREHOUSE SUMMARY asks for one total euro figure across every container
+     in scope. Handing the model each container's CHEAPEST above and making
+     it add them up itself is exactly the failure this engine exists to
+     remove — found for real on an EV-03 sweep where 4 of 5 runs summed
+     wrong (see test/eval-runner.js). Sum it here instead, once, and the
+     model only has to copy it. Refused containers contribute nothing —
+     matches warehouseExposure(), which renders the same figure in the UI. */
+  const totalExposure = pricing.scoped.reduce((sum, e) =>
+    sum + (!e.refuse && e.priced && e.priced.cheapest ? e.priced.cheapest.total : 0), 0);
+  lines.push("TOTAL WAREHOUSE EXPOSURE (sum of CHEAPEST across every priced, non-refused");
+  lines.push("container above — already added up, do not re-sum it): " + totalExposure + " EUR");
+  lines.push("");
 
   return lines.join("\n");
 }
