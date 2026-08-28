@@ -164,6 +164,24 @@ body {
   display: block; margin-bottom: var(--sp-2); font-family: var(--font-mono);
   font-size: var(--fs-0); color: var(--ink-2); white-space: nowrap;
 }
+/* Occupancy as a bar. Two warehouses at 84% and 49% separate instantly
+   here; as two numbers on two rows they do not. */
+.occ { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.occ-track {
+  flex: 1; height: 6px; border-radius: 999px;
+  background: var(--chip); overflow: hidden;
+}
+.occ-fill { height: 100%; border-radius: 999px; }
+.occ-fill.ok     { background: var(--ok); }
+.occ-fill.warn   { background: var(--warn); }
+.occ-fill.danger { background: var(--danger); }
+.occ-num {
+  font-family: var(--font-mono); font-size: var(--fs-0);
+  color: var(--ink-3); white-space: nowrap;
+}
+/* The lane split, before anything is opened. */
+.triage-summary { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+
 .container-row {
   font-size: var(--fs-0); color: var(--ink-2);
   padding: var(--sp-1) 0; border-bottom: var(--border-w) solid var(--line);
@@ -189,6 +207,41 @@ body {
 .rate-num { font-family: var(--font-mono); font-size: var(--fs-0); color: var(--ink-2); }
 details.routine { margin-top: var(--sp-2); }
 details.routine summary { color: var(--ink-3); }
+
+/* ═══ DRAWERS — disclosure that looks openable. The bare <details> these
+   replaced read as dim footnotes, so the yard and inbound tables (the
+   proof the world actually loaded) were the easiest thing to miss. ═══ */
+.drawer {
+  margin-top: var(--sp-3); background: var(--bg-raise);
+  border: var(--border-w) solid var(--line); border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.drawer > summary {
+  display: flex; align-items: center; gap: var(--sp-2); cursor: pointer;
+  padding: var(--sp-2) var(--sp-3); list-style: none;
+  color: var(--ink); font-size: var(--fs-1); font-weight: 600;
+}
+/* Both are needed: the pseudo-element for WebKit, list-style for the rest. */
+.drawer > summary::-webkit-details-marker { display: none; }
+.drawer > summary::before {
+  content: ""; flex: none; width: 6px; height: 6px; margin: 0 2px;
+  border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3);
+  transform: rotate(-45deg); transition: transform .15s ease;
+}
+.drawer[open] > summary::before { transform: rotate(45deg); }
+.drawer > summary:hover { background: var(--bg-inset); }
+.drawer > summary:hover::before { border-color: var(--accent); }
+.drawer > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.drawer-count {
+  margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-0);
+  font-weight: 400; color: var(--ink-3);
+}
+.drawer[open] > summary { border-bottom: var(--border-w) solid var(--line); }
+.drawer-body { padding: var(--sp-3); }
+.drawer-body > .meta-line:first-child { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .drawer > summary::before { transition: none; }
+}
 
 /* ═══ CHIPS (citations) ═══ */
 .chip {
@@ -346,6 +399,14 @@ details.routine summary { color: var(--ink-3); }
   color: var(--ink-2); vertical-align: top;
 }
 .scroll-x { overflow-x: auto; }
+/* Source list: what each file holds, in words. A character count proved
+   the file loaded but told the reader nothing about what is in it. */
+.source-table td:first-child { white-space: nowrap; padding-right: var(--sp-4); }
+.source-table td { color: var(--ink-2); }
+.source-holds {
+  display: block; margin-top: 2px;
+  font-family: var(--font-body); font-size: var(--fs-0); color: var(--ink-3);
+}
 .page-section { padding: var(--sp-4); }
 /* Two views, one at a time. The kit's .console has min-height 100vh, so a
    section placed below it always starts a full screen down — a view switch
@@ -785,10 +846,27 @@ The agent never escalates to a WP-8 owner directly. It escalates to the Inbound 
 Choosing the owner is the manager's judgement, not the agent's. The agent states the trigger and the evidence; it does not name an owner.
 `;
 
+/* `blurb` and `holds` exist for the reader, not the agent. A character
+   count proves a file loaded but says nothing about what is in it, and
+   "3235 characters" is the least useful thing this console could tell
+   someone opening it for the first time. The agent still receives the
+   full `text` either way. */
 const POLICY_FILES = [
-  { name: "carrier_contracts.md", text: POLICY_CARRIER_CONTRACTS },
-  { name: "external_vendors.md", text: POLICY_EXTERNAL_VENDORS },
-  { name: "warehouse_policy.md", text: POLICY_WAREHOUSE_POLICY }
+  { name: "carrier_contracts.md", text: POLICY_CARRIER_CONTRACTS,
+    holds: "Sections CC-1 – CC-5",
+    blurb: "The two carriers under contract — Poseidón Freight and Leviatán Lines. "
+         + "Which unit types each one covers, how many free-time days it gives, the daily "
+         + "D&D rate once that runs out, and whether it sells an extension at all." },
+  { name: "external_vendors.md", text: POLICY_EXTERNAL_VENDORS,
+    holds: "Sections XV-1 – XV-5",
+    blurb: "The outside vendors. What a standard drayage move costs, what expediting adds "
+         + "on top, and how much spend the agent is allowed to put on the table before a "
+         + "human has to sign it off." },
+  { name: "warehouse_policy.md", text: POLICY_WAREHOUSE_POLICY,
+    holds: "Sections WP-1 – WP-7",
+    blurb: "The warehouse SOP. Slot ceilings and occupancy bands, the hard daily cap on "
+         + "outbound moves, how two containers competing for one slot get sequenced, every "
+         + "escalation trigger, and the human approval gate." }
 ];
 
 /* ------------------------------------------------------------------
@@ -956,6 +1034,19 @@ function table(rows, columns) {
   ).join("");
   return "<div class=\"scroll-x\"><table class=\"data-table\"><tr>" + head + "</tr>"
        + body + "</table></div>";
+}
+
+/* A disclosure panel that looks openable. The bare <details> these
+   replaced read as dim footnotes — the yard and inbound tables are the
+   proof the world actually loaded, which is worth finding. */
+function drawer(label, count, hint, body, open) {
+  return "<details class=\"drawer\"" + (open ? " open" : "") + ">"
+    + "<summary><span class=\"drawer-label\">" + esc(label) + "</span>"
+    + (count ? "<span class=\"drawer-count\">" + esc(count) + "</span>" : "")
+    + "</summary>"
+    + "<div class=\"drawer-body\">"
+    + (hint ? "<p class=\"meta-line\">" + esc(hint) + "</p>" : "")
+    + body + "</div></details>";
 }
 
 /* A named stage of the loop, so a viewer can see where they are. */
@@ -1167,8 +1258,12 @@ function renderLane(label, rows, pricing, kind) {
   const shown = rows.slice(0, LANE_VISIBLE);
   const hidden = rows.length - shown.length;
 
+  /* No count in the lane head: the triage summary directly above the
+     drawer already carries it, and repeating it here read as two
+     different facts rather than one. The head only has to say which
+     group you are looking at once the list is open. */
   let html = "<div class=\"lane\"><div class=\"lane-head\">"
-    + badge(label + " · " + rows.length, kind) + "</div>";
+    + badge(label, kind) + "</div>";
 
   html += shown.map(c => {
     const entry = pricing.scoped.find(e => e.container.container_id === c.container_id);
@@ -1210,15 +1305,28 @@ function renderWarehouseList() {
        Occupancy is a warehouse statistic; exposure is what the week costs. */
     const exposure = pricing ? warehouseExposure(pricing) : 0;
 
+    const occKind = occ >= 80 ? "danger" : occ >= 70 ? "warn" : "ok";
+
     let block = "<div class=\"warehouse-section\">"
       + "<div class=\"warehouse-head\"><span class=\"warehouse-name\">" + esc(wh) + "</span>"
       + (occ !== null && info
-          ? " " + badge(occ + "% · " + esc(info.band), occ >= 80 ? "danger" : occ >= 70 ? "warn" : "ok")
+          ? " " + badge(occ + "% · " + esc(info.band), occKind)
           : "")
-      + "</div>"
-      + (exposure > 0
-          ? "<span class=\"warehouse-exposure\">" + formatEur(exposure) + " at stake</span>"
-          : "");
+      + "</div>";
+
+    /* Occupancy as a bar, not only a number. How full the yard is is the
+       first thing an operator reads off this list, and 84 vs 49 separates
+       at a glance where two percentages do not. */
+    if (occ !== null && info) {
+      block += "<div class=\"occ\" title=\"" + info.occupied + " of " + info.slots + " slots\">"
+        + "<div class=\"occ-track\"><div class=\"occ-fill " + occKind
+        + "\" style=\"width:" + occ + "%\"></div></div>"
+        + "<span class=\"occ-num\">" + info.occupied + "/" + info.slots + "</span></div>";
+    }
+
+    block += (exposure > 0
+      ? "<span class=\"warehouse-exposure\">" + formatEur(exposure) + " at stake</span>"
+      : "");
 
     if (!review.length) {
       block += "<p class=\"muted\">Nothing awaiting review — every container here already"
@@ -1233,8 +1341,20 @@ function renderWarehouseList() {
         + "<div class=\"title\">" + review.length + " container"
         + (review.length === 1 ? "" : "s") + " awaiting review</div>";
 
-      block += renderLane("Needs you", needsYou, pricing, "danger");
-      block += renderLane("Confirm the pick", confirm, pricing, "info");
+      /* The card is a summary first. Every container of every warehouse
+         expanded at once turned a two-warehouse sidebar into a long
+         scroll where nothing stood out; the split between what needs
+         judgement and what needs a click is the part worth seeing
+         without opening anything. */
+      block += "<div class=\"triage-summary\">"
+        + (needsYou.length ? badge("Needs you · " + needsYou.length, "danger") : "")
+        + (confirm.length ? badge("Confirm · " + confirm.length, "info") : "")
+        + "</div>";
+
+      block += drawer("Containers", review.length + "",
+        "", renderLane("Needs you", needsYou, pricing, "danger")
+          + renderLane("Confirm the pick", confirm, pricing, "info"),
+        !!active);
 
       block += "<div class=\"foot\">" + statusBadge(caseStatus(caseId));
       if (outcome) block += " " + badge(outcome.label, outcome.kind);
@@ -1242,11 +1362,10 @@ function renderWarehouseList() {
     }
 
     if (booked.length) {
-      block += "<details class=\"routine\"><summary>" + booked.length
-        + " already booked this week</summary>"
-        + booked.map(c => "<div class=\"meta-line\">" + esc(c.container_id) + " · "
-            + esc(c.carrier) + " · returns " + esc(c.booked_return_date) + "</div>").join("")
-        + "</details>";
+      block += drawer("Already booked", booked.length + "",
+        "Return date set — no decision needed, but they still use move slots.",
+        booked.map(c => "<div class=\"meta-line\">" + esc(c.container_id) + " · "
+            + esc(c.carrier) + " · returns " + esc(c.booked_return_date) + "</div>").join(""));
     }
 
     return block + "</div>";
@@ -1255,9 +1374,13 @@ function renderWarehouseList() {
 
 /* Shown before a case is picked: proof the world loaded. */
 function renderWorldView() {
+  const sourceRow = (path, holds, blurb) =>
+    "<tr><td><span class=\"mono\">" + esc(path) + "</span>"
+    + "<span class=\"source-holds\">" + esc(holds) + "</span></td>"
+    + "<td>" + esc(blurb) + "</td></tr>";
+
   const policies = POLICY_FILES.map(p =>
-    "<tr><td class=\"mono\">policies/" + esc(p.name) + "</td>"
-    + "<td>" + p.text.length + " characters</td></tr>"
+    sourceRow("policies/" + p.name, p.holds, p.blurb)
   ).join("");
 
   /* The cold open. Someone opening this file for the first time, with no key
@@ -1280,17 +1403,22 @@ function renderWorldView() {
 
   html += stage(1, "The world this agent can see",
       "Loaded from files on disk. The agent sees this and nothing else.")
-    + "<div class=\"scroll-x\"><table class=\"data-table\">"
-    + "<tr><th>Source</th><th>Loaded</th></tr>" + policies
-    + "<tr><td class=\"mono\">data/containers_inyard.csv</td><td>"
-    + CONTAINERS_INYARD.length + " containers</td></tr>"
-    + "<tr><td class=\"mono\">data/containers_inbound.csv</td><td>"
-    + CONTAINERS_INBOUND.length + " arrivals</td></tr>"
+    + "<div class=\"scroll-x\"><table class=\"data-table source-table\">"
+    + "<tr><th>Source</th><th>What it holds</th></tr>" + policies
+    + sourceRow("data/containers_inyard.csv",
+        CONTAINERS_INYARD.length + " containers",
+        "Containers already on the ground across both warehouses, under active return "
+        + "management this week — including the ones whose return is already booked, "
+        + "because those still consume outbound move slots.")
+    + sourceRow("data/containers_inbound.csv",
+        CONTAINERS_INBOUND.length + " arrivals",
+        "Containers still arriving this week. Context for what the yard is about to look "
+        + "like — not part of this week's review, because their free-time clock has not started.")
     + "</table></div>"
-    + "<details><summary>All containers in yard (" + CONTAINERS_INYARD.length + ")</summary>"
-    + table(CONTAINERS_INYARD) + "</details>"
-    + "<details><summary>Inbound arrivals this week (" + CONTAINERS_INBOUND.length + ")</summary>"
-    + table(CONTAINERS_INBOUND) + "</details>"
+    + drawer("All containers in yard", CONTAINERS_INYARD.length + " rows",
+        "Everything on the ground now, booked and unbooked.", table(CONTAINERS_INYARD))
+    + drawer("Inbound arrivals this week", CONTAINERS_INBOUND.length + " rows",
+        "Arriving over the next few days, not yet reviewable.", table(CONTAINERS_INBOUND))
     + "<p class=\"boundary-note\">The agent recommends. It never books, buys, or commits."
     + " Every recommendation waits for a human decision.</p>";
 
@@ -3012,6 +3140,12 @@ function handleGate(action, key) {
 }
 
 document.addEventListener("click", function (event) {
+  /* A drawer toggle inside a case card must not also re-select the case.
+     selectCase() re-renders the sidebar, which resets every <details> to
+     its default state — so without this the containers drawer on the
+     selected warehouse would spring back open the instant you closed it. */
+  if (event.target.closest("summary")) return;
+
   const card = event.target.closest(".case-card");
   if (card) { selectCase(card.getAttribute("data-case"), false); return; }
 
