@@ -11,6 +11,7 @@
 # 2. Re-include only the product.
 !/README.md
 !/ARCHITECTURE.md
+!/DECISIONS.md
 !/index.html
 !/test/
 !/evals/

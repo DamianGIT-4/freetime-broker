@@ -76,6 +76,12 @@ index.html    the whole console — UI, agent loop and eval view, no build step
 data/         synthetic yard roster, inbound roster and the five eval cases
 policies/     carrier contracts, external vendors, warehouse policy
 design/       locked design tokens
+test/         engine, allocator and eval-runner suites
+evals/        committed sweep results, history and review surface
 ```
 
 Open `index.html` directly in a browser, or use the live link above.
+
+[DECISIONS.md](DECISIONS.md) records why the codebase looks the way it does — what changed,
+what it replaced, and the evidence that settled it — including the bug that turned a
+reported 100% pass rate into an honest 20%.
