@@ -196,8 +196,8 @@ body {
   font-family: var(--font-mono); font-size: var(--fs-0);
   color: var(--ink-3); white-space: nowrap;
 }
-/* The lane split, before anything is opened. */
-.triage-summary { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+/* The count that needs judgement, on the closed row. */
+.tally-urgent { color: var(--danger); font-weight: 700; }
 
 .container-row {
   font-size: var(--fs-0); color: var(--ink-2);
@@ -253,6 +253,12 @@ details.routine summary { color: var(--ink-3); }
   margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-0);
   font-weight: 400; color: var(--ink-3);
 }
+/* The warehouse currently under review. Opening this drawer selects it,
+   so the open state and the accent always agree. */
+.case-drawer.active { border-color: var(--accent); }
+.case-drawer.active > summary { color: var(--ink); }
+.case-drawer.active > summary::before { border-color: var(--accent); }
+.case-drawer > summary:hover .drawer-label { color: var(--accent); }
 .drawer[open] > summary { border-bottom: var(--border-w) solid var(--line); }
 .drawer-body { padding: var(--sp-3); }
 .drawer-body > .meta-line:first-child { margin-top: 0; }
@@ -452,9 +458,15 @@ details.routine summary { color: var(--ink-3); }
    on screen without scrolling the whole page. Same pattern the kit already
    uses for .log { max-height: 420px; overflow: auto; }.
    TO REVERT: delete this rule and the list grows the page again. */
+/* Roomier than it was: once each warehouse collapsed to a header, a bar,
+   an exposure figure and two closed drawers, the whole list fits inside
+   this and never shows a scrollbar at all — which is the only truly
+   minimal scrollbar. The cap still exists so a yard with many more
+   warehouses cannot push Settings off screen. */
 #warehouse-list {
-  max-height: min(420px, 38vh); overflow-y: auto; padding-right: var(--sp-2);
+  max-height: min(560px, 52vh); overflow-y: auto; padding-right: var(--sp-2);
   -webkit-overflow-scrolling: touch;    /* momentum scroll on iOS */
+  scrollbar-gutter: stable;
 }
 
 /* Quiet the scrollbars in the two panels that scroll internally. Colours come
@@ -466,6 +478,17 @@ html, #warehouse-list, .log, .scroll-x, pre {
 }
 html::-webkit-scrollbar, #warehouse-list::-webkit-scrollbar, .log::-webkit-scrollbar,
 .scroll-x::-webkit-scrollbar, pre::-webkit-scrollbar { width: 10px; height: 10px; }
+
+/* The sidebar sits in a narrow column, where the shared 10px bar reads as
+   a slab against the panel rather than a hairline. Half the width, and the
+   thumb only appears once the pointer is in the list. */
+#warehouse-list::-webkit-scrollbar { width: 5px; }
+#warehouse-list::-webkit-scrollbar-thumb {
+  border: 0; background: transparent; background-clip: padding-box;
+}
+#warehouse-list:hover::-webkit-scrollbar-thumb { background: var(--line); }
+#warehouse-list { scrollbar-color: transparent transparent; }
+#warehouse-list:hover { scrollbar-color: var(--line) transparent; }
 
 html::-webkit-scrollbar-track, #warehouse-list::-webkit-scrollbar-track,
 .log::-webkit-scrollbar-track, .scroll-x::-webkit-scrollbar-track,
@@ -1285,12 +1308,8 @@ function renderLane(label, rows, pricing, kind) {
   const shown = rows.slice(0, LANE_VISIBLE);
   const hidden = rows.length - shown.length;
 
-  /* No count in the lane head: the triage summary directly above the
-     drawer already carries it, and repeating it here read as two
-     different facts rather than one. The head only has to say which
-     group you are looking at once the list is open. */
   let html = "<div class=\"lane\"><div class=\"lane-head\">"
-    + badge(label, kind) + "</div>";
+    + badge(label + " · " + rows.length, kind) + "</div>";
 
   html += shown.map(c => {
     const entry = pricing.scoped.find(e => e.container.container_id === c.container_id);
@@ -1370,28 +1389,38 @@ function renderWarehouseList() {
       const confirm = review.filter(c => triageLane(
         pricing.scoped.find(e => e.container.container_id === c.container_id)) === "confirm");
 
-      block += "<div class=\"case-card" + active + "\" data-case=\"" + esc(caseId) + "\">"
-        + "<div class=\"title\">" + review.length + " container"
-        + (review.length === 1 ? "" : "s") + " awaiting review</div>";
+      /* One drawer per warehouse, closed until you open it. The card used
+         to render its title, both triage chips, a nested drawer and a
+         status row all at once — five stacked rows per warehouse, which
+         at a narrow width pushed the second warehouse off screen no
+         matter how short each row got. Opening this drawer is also what
+         selects the warehouse, so there is one target, not two.
 
-      /* The card is a summary first. Every container of every warehouse
-         expanded at once turned a two-warehouse sidebar into a long
-         scroll where nothing stood out; the split between what needs
-         judgement and what needs a click is the part worth seeing
-         without opening anything. */
-      block += "<div class=\"triage-summary\">"
-        + (needsYou.length ? badge("Needs you · " + needsYou.length, "danger") : "")
-        + (confirm.length ? badge("Confirm · " + confirm.length, "info") : "")
+         Everything the closed row hides is either already above it (the
+         exposure figure) or is the detail you opened it to read. */
+      const body = renderLane("Needs you", needsYou, pricing, "danger")
+        + renderLane("Confirm the pick", confirm, pricing, "info")
+        + "<div class=\"foot\">" + statusBadge(caseStatus(caseId))
+        + (outcome ? " " + badge(outcome.label, outcome.kind) : "")
         + "</div>";
 
-      block += drawer("Containers", review.length + "",
-        "", renderLane("Needs you", needsYou, pricing, "danger")
-          + renderLane("Confirm the pick", confirm, pricing, "info"),
-        !!active);
+      /* The closed row carries the one number worth acting on. A plain
+         total ("6") does not separate the two that need judgement from
+         the four that need a click, and putting the full split inside
+         the drawer only repeated the lane headings directly beneath it. */
+      const tally = needsYou.length
+        ? "<span class=\"tally-urgent\">" + needsYou.length + " need you</span>"
+        : review.length + "";
 
-      block += "<div class=\"foot\">" + statusBadge(caseStatus(caseId));
-      if (outcome) block += " " + badge(outcome.label, outcome.kind);
-      block += "</div></div>";
+      block += "<details class=\"drawer case-drawer" + active + "\" data-case=\""
+        + esc(caseId) + "\"" + (active ? " open" : "") + ">"
+        /* "N to review", not "N containers awaiting review": at the 255px
+           sidebar the longer phrase plus the urgent count wraps to a
+           second line, and the count is the half worth keeping. */
+        + "<summary><span class=\"drawer-label\">" + review.length
+        + " to review</span>"
+        + "<span class=\"drawer-count\">" + tally + "</span></summary>"
+        + "<div class=\"drawer-body\">" + body + "</div></details>";
     }
 
     if (booked.length) {
@@ -3175,14 +3204,28 @@ function handleGate(action, key) {
 }
 
 document.addEventListener("click", function (event) {
-  /* A drawer toggle inside a case card must not also re-select the case.
-     selectCase() re-renders the sidebar, which resets every <details> to
-     its default state — so without this the containers drawer on the
-     selected warehouse would spring back open the instant you closed it. */
-  if (event.target.closest("summary")) return;
+  /* Opening a warehouse's drawer is what selects it — one target rather
+     than a card to click and a chevron to expand.
 
-  const card = event.target.closest(".case-card");
-  if (card) { selectCase(card.getAttribute("data-case"), false); return; }
+     The two branches matter. Selecting re-renders the sidebar, which
+     resets every <details> to its default state, so on an already
+     selected warehouse we must let the native toggle run and NOT
+     re-render, or closing it would spring straight back open. On an
+     unselected one we suppress the native toggle instead and let the
+     re-render open it, so the open drawer and the selected case can
+     never disagree. */
+  const caseSummary = event.target.closest(".case-drawer > summary");
+  if (caseSummary) {
+    const id = caseSummary.parentElement.getAttribute("data-case");
+    if (id !== SELECTED_CASE) {
+      event.preventDefault();
+      selectCase(id, false);
+    }
+    return;
+  }
+
+  /* Every other drawer toggles freely and selects nothing. */
+  if (event.target.closest("summary")) return;
 
   const runButton = event.target.closest(".run-btn");
   if (runButton) { runCase(runButton.getAttribute("data-case")); return; }
