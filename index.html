@@ -409,6 +409,18 @@ details.routine summary { color: var(--ink-3); }
   padding: var(--sp-2); border-bottom: var(--border-w) solid var(--line);
   color: var(--ink-2); vertical-align: top;
 }
+/* One line per row. Left to its own devices the browser handed the
+   168-character `notes` column 143px and the always-empty
+   `booked_return_date` column 195px — so rows ranged from 32px to 152px
+   and nothing lined up across them. The table already scrolls sideways;
+   it does not also need to grow downwards. */
+.data-table td, .data-table th { white-space: nowrap; }
+.data-table td[data-col="notes"] {
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis;
+}
+/* The source list is a .data-table too, but its second column is prose
+   that must wrap — nowrap clipped every description mid-sentence. */
+.source-table td:last-child { white-space: normal; }
 .scroll-x { overflow-x: auto; }
 /* Source list: what each file holds, in words. A character count proved
    the file loaded but told the reader nothing about what is in it. */
@@ -553,14 +565,14 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
       <div class="panel-body row-gap">
         <label class="meta-line" for="api-key">Anthropic API key</label>
         <input type="password" id="api-key" class="field-input" autocomplete="off"
-               spellcheck="false" placeholder="paste your key here">
+               spellcheck="false" placeholder="sk-ant-…">
         <div>
           <button id="save-key" type="button" class="btn">Save key</button>
           <button id="clear-key" type="button" class="btn">Clear key</button>
         </div>
         <div id="key-status" class="meta-line"></div>
-        <p class="boundary-note">The key is stored only in this browser, in localStorage.
-        It is never written into index.html and never displayed back to you.</p>
+        <p class="boundary-note">Stays in this browser. Never leaves your machine,
+        never shown again.</p>
       </div>
     </section>
   </div>
@@ -1059,9 +1071,17 @@ function esc(value) {
 function table(rows, columns) {
   if (!rows.length) return "<p class=\"muted\">(none)</p>";
   const cols = columns || Object.keys(rows[0]);
-  const head = cols.map(c => "<th>" + esc(c) + "</th>").join("");
+  const head = cols.map(c => "<th data-col=\"" + esc(c) + "\">" + esc(c) + "</th>").join("");
   const body = rows.map(r =>
-    "<tr>" + cols.map(c => "<td>" + esc(r[c]) + "</td>").join("") + "</tr>"
+    "<tr>" + cols.map(c => {
+      const v = (r[c] === undefined || r[c] === null) ? "" : String(r[c]);
+      /* Long free text carries its full value in a title. `notes` runs to
+         168 characters on some rows, which is why it is clamped in CSS
+         rather than allowed to set the row height. The model still
+         receives the whole field either way — this is display only. */
+      return "<td data-col=\"" + esc(c) + "\""
+        + (v.length > 24 ? " title=\"" + esc(v) + "\"" : "") + ">" + esc(v) + "</td>";
+    }).join("") + "</tr>"
   ).join("");
   return "<div class=\"scroll-x\"><table class=\"data-table\"><tr>" + head + "</tr>"
        + body + "</table></div>";
@@ -1116,11 +1136,24 @@ function caseStatus(caseId) {
   return stored ? stored.parsed.runStatus : "";
 }
 
+/* The topbar used to end with a count of policy files. How many files the
+   rules happen to live in is a fact about the build, not about the week —
+   an operator never needs it. Total exposure is the number she is actually
+   managing, and the engine already computes it per warehouse. */
+function totalExposure() {
+  return WAREHOUSES.reduce((sum, wh) => {
+    const review = warehouseContainers(wh).filter(needsReview);
+    if (!review.length) return sum;
+    return sum + warehouseExposure(computePricing(warehouseReviewCase(wh)));
+  }, 0);
+}
+
 function renderTopbarMeta() {
+  const exposure = totalExposure();
   document.getElementById("world-meta").innerHTML =
-    CONTAINERS_INYARD.length + " containers in yard · "
-    + CONTAINERS_INBOUND.length + " inbound · "
-    + POLICY_FILES.length + " policy files";
+    CONTAINERS_INYARD.length + " in yard · "
+    + CONTAINERS_INBOUND.length + " arriving"
+    + (exposure > 0 ? " · " + formatEur(exposure) + " at stake" : "");
 }
 
 /* What the HUMAN decided about a case, aggregated across its containers.
@@ -1445,17 +1478,15 @@ function renderWorldView() {
     + "</div>";
 
   if (!getApiKey()) {
-    html += "<div class=\"error-note\"><strong>No API key saved yet.</strong><br>"
-         + "This console calls the Anthropic API from your browser. Paste your key into"
-         + " <strong>Settings</strong>, lower left, and press Save key. It is stored only in"
-         + " this browser and never written into the file.</div>";
+    html += "<div class=\"error-note\"><strong>Add your Anthropic API key to run a"
+         + " review.</strong><br>Settings, lower left.</div>";
   } else {
     html += "<p class=\"muted\">Pick a warehouse's review from the list on the left. Every review"
          + " moves through the same five stages: input, context, decision, output, review.</p>";
   }
 
-  html += stage(1, "The world this agent can see",
-      "Loaded from files on disk. The agent sees this and nothing else.")
+  html += stage(1, "What this week's review is based on",
+      "Your carrier contracts, vendor rates and warehouse rules. Nothing outside these files.")
     + "<div class=\"scroll-x\"><table class=\"data-table source-table\">"
     + "<tr><th>Source</th><th>What it holds</th></tr>" + policies
     + sourceRow("data/containers_inyard.csv",
@@ -1509,13 +1540,13 @@ function renderMain() {
 
   /* ── 1 INPUT ── */
   if (isReview) {
-    html += stage(1, "Input", "Every container in " + warehouseLabel(c.warehouse) + " with no return"
-         + " booked yet — the actual week, not a hand-picked scenario.");
+    html += stage(1, "The containers", "Everything in " + warehouseLabel(c.warehouse) + " with no return"
+         + " booked yet — the real week, not a sample.");
     html += "<p class=\"meta-line\">" + esc(warehouseLabel(c.warehouse)) + " · "
          + esc(c.warehouse) + " · " + found.length
          + " container(s) awaiting review</p>";
   } else {
-    html += stage(1, "Input", "The case Lana is reviewing this week. Picked here, not typed by the agent.");
+    html += stage(1, "The containers", "The case Lana is reviewing this week. Picked here, not typed by the agent.");
     html += "<p class=\"meta-line\">" + esc(c.warehouse) + " · trigger " + esc(c.trigger_type)
          + " · expected " + esc(c.expected_status) + "</p>";
     html += "<div class=\"field\"><div class=\"k\">Expected</div><div class=\"v\">"
@@ -1525,8 +1556,8 @@ function renderMain() {
   }
 
   /* ── 2 CONTEXT ── */
-  html += stage(2, "Context",
-    "The records and policy the agent reads. It may use nothing else.");
+  html += stage(2, "What it checked",
+    "Your contracts and yard rules. Nothing outside them.");
   if (missing.length) {
     html += "<div class=\"error-note\">Missing from the yard roster: " + esc(missing.join(", ")) + "</div>";
   }
@@ -1552,7 +1583,7 @@ function renderMain() {
 
   /* Say it before the click, not after it fails. */
   if (!getApiKey()) {
-    html += "<div class=\"error-note\">No API key saved. Add one in Settings, lower left,"
+    html += "<div class=\"error-note\">Add your Anthropic API key in Settings, lower left,"
          + " or this run will fail.</div>";
   }
 
@@ -1569,15 +1600,15 @@ function renderMain() {
       : waiting;
 
   /* ── 3 DECISION ── */
-  html += stage(3, "Decision", "What the agent chose, and why, in its own words.");
+  html += stage(3, "The recommendation", "What it suggests for each container, and why.");
   html += stored ? renderDecision(stored.parsed, stored.meta) : pending;
 
   /* ── 4 OUTPUT ── */
-  html += stage(4, "Output", "Every field labeled, so a person can judge it in under a minute.");
+  html += stage(4, "The numbers", "Every option priced, so you can check the call in under a minute.");
   html += stored ? renderOutputFields(stored.parsed, stored.meta, pricing) : waiting;
 
   /* ── 5 REVIEW ── */
-  html += stage(5, "Review", "Nothing is committed until a person approves, edits, or escalates it.");
+  html += stage(5, "Your decision", "Nothing happens until you approve, edit, or escalate.");
   html += stored ? renderReview(stored.parsed, stored.meta) : waiting;
 
   if (stored) {
@@ -1844,7 +1875,9 @@ function selectCase(caseId, scrollToRun) {
   }
 }
 
-renderTopbarMeta();
+/* Called from the boot sequence at the end of the script, not here: the
+   exposure figure reaches CONTRACTS, which is declared further down the
+   file, so running it at this point hits the temporal dead zone. */
 
 /* ------------------------------------------------------------------
    SETTINGS — the API key lives in this browser's localStorage only.
@@ -1870,9 +1903,10 @@ function renderKeyStatus(message) {
   chip.textContent = key ? "key saved" : "no key";
 
   if (message) { status.innerHTML = message; return; }
-  status.innerHTML = key
-    ? "Key saved in this browser (" + key.length + " characters). Reloading keeps it."
-    : "No key saved. Paste your key above and press Save key.";
+  /* Nothing when there is no key: the empty field and the notice in the
+     main panel already say so twice. The character count was debug
+     detail — the badge above already reports saved/not saved. */
+  status.innerHTML = key ? "Saved. Reloading keeps it." : "";
 }
 
 document.getElementById("save-key").addEventListener("click", function () {
@@ -2431,7 +2465,7 @@ function explainError(status, bodyText) {
 async function callAgent(userMessage) {
   const key = getApiKey();
   if (!key) {
-    throw new Error("No API key saved. Paste your Anthropic key into Settings at the top of this page and press Save key.");
+    throw new Error("No API key saved. Add your Anthropic API key in Settings, lower left.");
   }
 
   let response;
@@ -3236,6 +3270,7 @@ document.addEventListener("click", function (event) {
 });
 
 loadEvalEvidence();
+renderTopbarMeta();
 renderConsole();
 renderRunLog();
 </script>

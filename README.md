@@ -18,11 +18,11 @@ No single lever always wins. That is what makes it a judgement call rather than 
 
 One loop, run once per container, in five visible stages:
 
-1. **Input** — the operator picks a review case: a warehouse and the containers in scope. She does not type it, she selects it.
-2. **Context** — the console loads the yard roster, the inbound roster and three policy files, and shows on screen exactly what is being sent to the model. Nothing about the decision hides behind the button.
-3. **Decision** — the agent counts first and decides second. It writes out every threshold it checked with the items counted by id, then prices every cost lever as a total on the same basis, then gives a risk, a status and one recommended action with the policy sections it applied.
-4. **Output** — every field labelled and separated, one block per container, judgeable in under a minute.
-5. **Human review** — Approve, Edit or Escalate.
+1. **The containers** — the operator picks a review: a warehouse and the containers in scope. She does not type it, she selects it.
+2. **What it checked** — the console loads the yard roster, the inbound roster and three policy files, and shows on screen exactly what is being sent to the model. Nothing about the decision hides behind the button.
+3. **The recommendation** — the agent counts first and decides second. It writes out every threshold it checked with the items counted by id, then prices every cost lever as a total on the same basis, then gives a risk, a status and one recommended action with the policy sections it applied.
+4. **The numbers** — every field labelled and separated, one block per container, judgeable in under a minute.
+5. **Your decision** — Approve, Edit or Escalate.
 
 **Nothing is booked, bought or sent.** The agent produces a claim; a person turns it into a decision. Until someone clicks one of the three buttons, a container is UNREVIEWED and nothing has happened.
 
