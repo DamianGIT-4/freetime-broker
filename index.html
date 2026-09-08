@@ -149,17 +149,6 @@ body {
   font-size: 11px; letter-spacing: 0;
 }
 
-/* ═══ CARDS (case list) ═══ */
-.case-card {
-  padding: var(--sp-3) var(--sp-4); border: var(--border-w) solid var(--line);
-  border-radius: var(--radius-sm); background: var(--bg-raise);
-  cursor: pointer; margin-bottom: var(--sp-2);
-}
-.case-card:hover { border-color: var(--accent); }
-.case-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
-.case-card .id { font-family: var(--font-mono); font-size: var(--fs-0); color: var(--ink-3); }
-.case-card .title { font-weight: 600; }
-
 /* ═══ WAREHOUSE REVIEW (console left column) — Lana's actual unit of
    work is a warehouse's containers, not a named test scenario. ═══ */
 .warehouse-section { margin-bottom: var(--sp-4); }
@@ -396,7 +385,6 @@ details.routine summary { color: var(--ink-3); }
    background. No new colour: this only changes WHICH kit token is used.
    TO REVERT: delete this block and --ink-3 applies again. */
 .topbar .meta,
-.case-card .id,
 .boundary-note,
 .stat .l,
 .field .k,
@@ -530,7 +518,11 @@ pre::-webkit-scrollbar-thumb:hover {
 .log .row .entry { display: flex; flex-direction: column; min-width: 0; word-break: break-word; }
 .log .row .entry .who { color: var(--ink); font-weight: 700; }
 .log .row + .row { border-top: var(--border-w) solid var(--line); margin-top: var(--sp-2); padding-top: var(--sp-2); }
-.case-card .foot { margin-top: var(--sp-2); }
+/* Was `.case-card .foot`, which stopped matching when the warehouse rows
+   became drawers — so this spacing had been silently absent. Scoped to the
+   drawer body on purpose: `<p class="foot">` around the Run button wants
+   its default paragraph margin, not this tighter one. */
+.drawer-body .foot { margin-top: var(--sp-2); }
 details > summary { cursor: pointer; color: var(--ink-2); font-size: var(--fs-0); }
 pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono);
       font-size: var(--fs-0); color: var(--ink-2); background: var(--bg-inset);
@@ -894,19 +886,18 @@ Choosing the owner is the manager's judgement, not the agent's. The agent states
 const POLICY_FILES = [
   { name: "carrier_contracts.md", text: POLICY_CARRIER_CONTRACTS,
     holds: "Sections CC-1 – CC-5",
-    blurb: "The two carriers under contract — Poseidón Freight and Leviatán Lines. "
-         + "Which unit types each one covers, how many free-time days it gives, the daily "
-         + "D&D rate once that runs out, and whether it sells an extension at all." },
+    blurb: "The two carriers under contract, Poseidón and Leviatán: covered unit types, "
+         + "free-time days, the daily D&D rate, and whether an extension can be bought." },
   { name: "external_vendors.md", text: POLICY_EXTERNAL_VENDORS,
     holds: "Sections XV-1 – XV-5",
-    blurb: "The outside vendors. What a standard drayage move costs, what expediting adds "
-         + "on top, and how much spend the agent is allowed to put on the table before a "
-         + "human has to sign it off." },
+    /* The Mon–Fri window is named here rather than given a row of its own:
+       it is a rule stated in this file, not a source the agent reads. */
+    blurb: "Drayage and expedite pricing, the Mon–Fri move window, and the spend ceiling "
+         + "before a human has to sign off." },
   { name: "warehouse_policy.md", text: POLICY_WAREHOUSE_POLICY,
     holds: "Sections WP-1 – WP-7",
-    blurb: "The warehouse SOP. Slot ceilings and occupancy bands, the hard daily cap on "
-         + "outbound moves, how two containers competing for one slot get sequenced, every "
-         + "escalation trigger, and the human approval gate." }
+    blurb: "Slot ceilings, occupancy bands, the hard daily cap on outbound moves, how "
+         + "contested slots are sequenced, and every escalation trigger." }
 ];
 
 /* ------------------------------------------------------------------
@@ -1469,13 +1460,11 @@ function renderWorldView() {
     + "<tr><th>Source</th><th>What it holds</th></tr>" + policies
     + sourceRow("data/containers_inyard.csv",
         CONTAINERS_INYARD.length + " containers",
-        "Containers already on the ground across both warehouses, under active return "
-        + "management this week — including the ones whose return is already booked, "
-        + "because those still consume outbound move slots.")
+        "On the ground now, both warehouses. Includes already-booked returns — they still "
+        + "consume outbound move slots.")
     + sourceRow("data/containers_inbound.csv",
         CONTAINERS_INBOUND.length + " arrivals",
-        "Containers still arriving this week. Context for what the yard is about to look "
-        + "like — not part of this week's review, because their free-time clock has not started.")
+        "Arriving this week. Not reviewable yet: the free-time clock has not started.")
     + "</table></div>"
     + drawer("All containers in yard", CONTAINERS_INYARD.length + " rows",
         "Everything on the ground now, booked and unbooked.", table(CONTAINERS_INYARD))
