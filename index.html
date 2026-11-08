@@ -2193,6 +2193,12 @@ function toggleLayout() {
 
 document.getElementById("layout-toggle").addEventListener("click", toggleLayout);
 PHONE_QUERY.addEventListener("change", function () { renderConsole(); });
+/* Backup for browsers or emulators that resize without firing the media
+   query's change event: re-render only when the layout should flip. */
+window.addEventListener("resize", function () {
+  const want = isPhoneLayout() ? "phone" : "full";
+  if (document.documentElement.getAttribute("data-layout") !== want) renderConsole();
+});
 
 function renderView() {
   applyLayout();
