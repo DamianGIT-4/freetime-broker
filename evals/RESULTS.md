@@ -36,6 +36,39 @@ Those prove the figures are right. They do not prove the model narrates them cor
 
 
 
+
+
+
+## Sweep 2026-11-08 · claude-sonnet-4-5 · 20 runs per case · re-scored
+
+Commit `8b830f0`. Mechanical pass rate is checked automatically against the pricing engine.
+The verdict column is a human judgement of the explanation and is filled in by hand.
+
+| Case | Mechanical | Verdict | Note |
+|---|---|---|---|
+| EV-01 | 100% (20/20) | Pass | Slot ordering correct every run (L-5518 before P-2041); totals exact; rationale clear. |
+| EV-02 | 100% (20/20) | Pass | Correct choice and figures. Minor noise: WHY/SOURCES sometimes list unrelated containers. |
+| EV-03 | 100% (20/20) | Needs work | Right option and price, but RETURN DAY is invented: 2026-08-05 in 13/20, 2026-08-09 in 5/20, a phrase in 2/20. XV-2 (48h) gives 2026-08-05. The engine does not supply the expedite date and no check covers it. |
+| EV-04 | 100% (20/20) | Pass | Refuses every run; names both readings of the discharge conflict and what would resolve it. |
+| EV-05 | 100% (20/20) | Pass | Refuses every run; cites CC-1 and CC-5 correctly. |
+
+Raw outputs: `evals/runs/2026-11-08T15-10-37.json`
+
+## Sweep 2026-11-08 · claude-sonnet-4-5 · 1 runs per case
+
+Commit `8b830f0`. Mechanical pass rate is checked automatically against the pricing engine.
+The verdict column is a human judgement of the explanation and is filled in by hand.
+
+| Case | Mechanical | Verdict | Note |
+|---|---|---|---|
+| EV-01 | 100% (1/1) | | |
+| EV-02 | 100% (1/1) | | |
+| EV-03 | 100% (1/1) | | |
+| EV-04 | 100% (1/1) | | |
+| EV-05 | 100% (1/1) | | |
+
+Raw outputs: `evals/runs/2026-11-08T15-05-11.json`
+
 ## Sweep 2026-08-23 · claude-sonnet-4-5 · 5 runs per case · re-scored
 
 Commit `9a238b4`. Mechanical pass rate is checked automatically against the pricing engine.

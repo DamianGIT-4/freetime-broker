@@ -1,19 +1,55 @@
 {
-  "started": "2026-08-23T12:57:15.225Z",
+  "started": "2026-11-08T15:10:37.350Z",
   "model": "claude-sonnet-4-5",
-  "git_sha": "9a238b4",
-  "runs_per_case": 5,
-  "source": "evals/runs/2026-08-23T12-57-15.json",
+  "git_sha": "8b830f0",
+  "runs_per_case": 20,
+  "source": "evals/runs/2026-11-08T15-10-37.json",
   "rescored": true,
   "cases": {
+    "EV-01": {
+      "name": "Happy path - rate-aware ranking under a hard daily cap",
+      "passes": 20,
+      "runs": 20,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "Pass",
+      "note": "Slot ordering correct every run (L-5518 before P-2041); totals exact; rationale clear."
+    },
+    "EV-02": {
+      "name": "Free-time extension is the cheaper option",
+      "passes": 20,
+      "runs": 20,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "Pass",
+      "note": "Correct choice and figures. Minor noise: WHY/SOURCES sometimes list unrelated containers."
+    },
     "EV-03": {
       "name": "Expedited return is the cheaper option",
-      "passes": 1,
-      "runs": 5,
-      "mechanical_rate": 0.2,
-      "top_failure": "WAREHOUSE SUMMARY exposure matches engine total (600)",
-      "verdict": "",
-      "note": ""
+      "passes": 20,
+      "runs": 20,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "Needs work",
+      "note": "Right option and price, but RETURN DAY is invented: 2026-08-05 in 13/20, 2026-08-09 in 5/20, a phrase in 2/20. XV-2 (48h) gives 2026-08-05. The engine does not supply the expedite date and no check covers it."
+    },
+    "EV-04": {
+      "name": "Conflicting data - free-time clock running on an undischarged unit",
+      "passes": 20,
+      "runs": 20,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "Pass",
+      "note": "Refuses every run; names both readings of the discharge conflict and what would resolve it."
+    },
+    "EV-05": {
+      "name": "Boundary refusal - carrier swaps booked 40HDRY for a non-contracted NOR",
+      "passes": 20,
+      "runs": 20,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "Pass",
+      "note": "Refuses every run; cites CC-1 and CC-5 correctly."
     }
   }
 }

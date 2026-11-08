@@ -1,0 +1,163 @@
+{
+  "started": "2026-11-08T15:05:11.950Z",
+  "model": "claude-sonnet-4-5",
+  "runs_per_case": 1,
+  "git_sha": "8b830f0",
+  "cases": {
+    "EV-01": {
+      "name": "Happy path - rate-aware ranking under a hard daily cap",
+      "expected_status": "OK",
+      "passes": 1,
+      "runs": 1,
+      "rate": 100,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "",
+      "note": "",
+      "failures": {},
+      "raw": [
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 2 containers reviewed, 2 at risk, 0 escalated, 1075 EUR total exposure\n\n---\n\nCONTAINER: P-2041\nCARRIER: Poseidón Freight\nCONTAINER TYPE: 40HDRY\nDAYS LEFT: 1\nCOUNTS: 2 containers within 2 days of expiry (P-2041, L-5518); threshold 5; NOT MET. Free move slots on 2026-08-04: 1 of 4 (P-2044, L-5522, P-2048 already booked).\nOPTIONS: accept overrun 1 day = 500 + 75 = 575 EUR (moves 2026-08-05 after WP-5 sequencing); expedite = 500 + 100 = 600 EUR; extension UNAVAILABLE (Poseidón Freight sells no extension product, CC-2); CHEAPEST: accept overrun at 575 EUR\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: accept overrun at 575 EUR\nRATIONALE: Accept 1 day D&D at 575 EUR total. L-5518 takes the 2026-08-04 slot under WP-5 sequencing because its D&D rate (150/day) is higher than P-2041's (75/day). Expedite at 600 EUR would cost 25 EUR more and does not create dock capacity.\nWHY: days_left, booked_return_date, next_standard_slot; CC-2, WP-4, WP-5, XV-2\nSOURCES: P-2041, L-5518, P-2044, L-5522, P-2048, CC-2, WP-4, WP-5, XV-2\nRETURN DAY: 2026-08-05\nESCALATION: NONE\n\n---\n\nCONTAINER: L-5518\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 40HDRY\nDAYS LEFT: 1\nCOUNTS: 2 containers within 2 days of expiry (P-2041, L-5518); threshold 5; NOT MET. Free move slots on 2026-08-04: 1 of 4 (P-2044, L-5522, P-2048 already booked).\nOPTIONS: accept overrun 0 days = 500 + 0 = 500 EUR; expedite = 500 + 100 = 600 EUR; extension UNAVAILABLE (inside the 5-day request window, 1 days left, CC-3); CHEAPEST: accept overrun at 500 EUR\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: accept overrun at 500 EUR\nRATIONALE: Return on standard slot 2026-08-04 at 500 EUR. WP-5 sequencing awards this container the last available 04 Aug slot over P-2041 because its D&D rate (150/day) is higher, saving 75 EUR versus the reverse order.\nWHY: days_left, booked_return_date, next_standard_slot; CC-3, WP-4, WP-5\nSOURCES: L-5518, P-2041, P-2044, L-5522, P-2048, CC-3, WP-4, WP-5\nRETURN DAY: 2026-08-04\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5494,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3188,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 844,
+            "service_tier": "standard",
+            "inference_geo": "not_available",
+            "speed": "standard"
+          }
+        }
+      ]
+    },
+    "EV-02": {
+      "name": "Free-time extension is the cheaper option",
+      "expected_status": "OK",
+      "passes": 1,
+      "runs": 1,
+      "rate": 100,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "",
+      "note": "",
+      "failures": {},
+      "raw": [
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 0 at risk, 0 escalated, 575 EUR total exposure\n\n---\n\nCONTAINER: L-5530\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 40HDRY\nDAYS LEFT: 7\nCOUNTS: Free move slots on 2026-08-13: 0 of 4 already booked. High-stakes concentration threshold: 1 container within 2 days of expiry (only L-5530 at 7 days); threshold 5; NOT MET.\nOPTIONS: accept overrun 3 days = 500 + 450 = 950 EUR; expedite = 500 + 100 = 600 EUR; extension 3 days = 500 + 75 = 575 EUR; CHEAPEST: extension 575 EUR\nRISK: OK\nSTATUS: OK\nRECOMMENDATION: Purchase 3-day free-time extension at 575 EUR\nRATIONALE: Extension at 575 EUR saves 25 EUR versus expedite at 600 EUR and saves 375 EUR versus accepting overrun at 950 EUR. Container has 7 days remaining, well outside the 5-day request window, so extension is available.\nWHY: days_left, next_standard_slot, free_time_expiry; CC-3, XV-2, XV-4\nSOURCES: L-5530, CC-3, XV-2, XV-4\nRETURN DAY: 2026-08-13\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5040,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3188,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 381,
+            "service_tier": "standard",
+            "inference_geo": "not_available",
+            "speed": "standard"
+          }
+        }
+      ]
+    },
+    "EV-03": {
+      "name": "Expedited return is the cheaper option",
+      "expected_status": "OK",
+      "passes": 1,
+      "runs": 1,
+      "rate": 100,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "",
+      "note": "",
+      "failures": {},
+      "raw": [
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 1 at risk, 0 escalated, 600 EUR total exposure at stake\n\n---\n\nCONTAINER: L-5533\nCARRIER: Leviatán Lines\nCONTAINER TYPE: 20DRY\nDAYS LEFT: 8\nCOUNTS: 2 containers within 2 days of expiry (P-2041, L-5518); threshold 5; NOT MET. Free move slots on 2026-08-17: unknown (outside visible booking window).\nOPTIONS: accept overrun 6 days = 500 + 900 = 1400 EUR; expedite = 500 + 100 = 600 EUR; extension 6 days = 500 + 150 = 650 EUR; CHEAPEST: expedite 600 EUR\nRISK: AT RISK\nSTATUS: OK\nRECOMMENDATION: expedite return at 600 EUR\nRATIONALE: With next standard slot 2026-08-17 falling 6 days after free-time expiry 2026-08-11, overrun would cost 1400 EUR. Extension at 650 EUR is available but expedite at 600 EUR is cheaper by 50 EUR, saving 800 EUR against accepting overrun.\nWHY: days_left, next_standard_slot, free_time_expiry; CC-3, XV-2, XV-4\nSOURCES: L-5533, CC-3, XV-2, XV-4\nRETURN DAY: 2026-08-05\nESCALATION: NONE",
+          "usage": {
+            "input_tokens": 5042,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3188,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 386,
+            "service_tier": "standard",
+            "inference_geo": "not_available",
+            "speed": "standard"
+          }
+        }
+      ]
+    },
+    "EV-04": {
+      "name": "Conflicting data - free-time clock running on an undischarged unit",
+      "expected_status": "REFUSED-ESCALATE",
+      "passes": 1,
+      "runs": 1,
+      "rate": 100,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "",
+      "note": "",
+      "failures": {},
+      "raw": [
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 0 at risk, 1 escalated, 0 EUR total exposure at stake\n\n---\n\nCONTAINER: P-2055\nCARRIER: Poseidón Freight\nCONTAINER TYPE: 40DRY\nDAYS LEFT: UNKNOWN\nCOUNTS: NONE APPLY\nOPTIONS: NONE PRICEABLE — discharge_confirmed is no, free_time_start cannot be trusted, days_left cannot be calculated\nRISK: ESCALATE\nSTATUS: REFUSED-ESCALATE\nRECOMMENDATION: REFUSED — warehouse_policy.md WP-6 and carrier_contracts.md CC-4: free_time_start is recorded as 2026-07-22 but discharge_confirmed is no, so the clock has not started and days_left cannot be trusted. Additionally, no yard slot is assigned. Two possible readings exist: discharge happened and was not logged, making the container 2 days from expiry with no slot, or discharge is genuinely delayed and the clock has not started at all. Terminal confirmation is required to choose between them.\nRATIONALE: The container shows free_time_start 2026-07-22 with 2 days remaining until expiry 2026-08-05, but discharge_confirmed is no and yard_slot is blank. These fields directly contradict each other. No cost figure may be produced when the fundamental question — whether the free-time clock has started — cannot be answered from the data.\nWHY: free_time_start, discharge_confirmed, yard_slot, days_left; CC-4, WP-6\nSOURCES: P-2055, CC-4, WP-6\nRETURN DAY: NONE\nESCALATION: Conflicting data — free_time_start recorded as 2026-07-22 but discharge_confirmed is no, indicating under CC-4 that the clock has not started and any derived days_left figure is unreliable. Additionally no yard slot has been assigned despite the container showing as awaiting_discharge. Terminal confirmation is required to establish whether discharge has occurred and the clock is running, or whether discharge is genuinely delayed and the recorded free_time_start must be disregarded.",
+          "usage": {
+            "input_tokens": 5027,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3188,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 516,
+            "service_tier": "standard",
+            "inference_geo": "not_available",
+            "speed": "standard"
+          }
+        }
+      ]
+    },
+    "EV-05": {
+      "name": "Boundary refusal - carrier swaps booked 40HDRY for a non-contracted NOR",
+      "expected_status": "REFUSED-ESCALATE",
+      "passes": 1,
+      "runs": 1,
+      "rate": 100,
+      "mechanical_rate": 1,
+      "top_failure": null,
+      "verdict": "",
+      "note": "",
+      "failures": {},
+      "raw": [
+        {
+          "passed": true,
+          "text": "WAREHOUSE SUMMARY: WH-BCN, 84% occupancy (at-risk band), 1 container reviewed, 0 at risk, 1 escalated, 0 EUR total exposure\n\n---\n\nCONTAINER: P-2066\nCARRIER: Poseidón Freight\nCONTAINER TYPE: 40NOR\nDAYS LEFT: UNKNOWN\nCOUNTS: NONE APPLY\nOPTIONS: NONE PRICEABLE — unit type 40NOR is not one of 20DRY, 40DRY, 40HDRY, so no free-time period and no D&D rate exist\nRISK: ESCALATE\nSTATUS: REFUSED-ESCALATE\nRECOMMENDATION: REFUSED — carrier_contracts.md CC-1 and CC-5: container P-2066 carries unit type 40NOR, which is not listed among the three covered dry cargo types (20DRY, 40DRY, 40HDRY). A contracted carrier supplying an uncovered unit type does not make that unit type contractual. Falla & Co. has no agreed free-time period and no agreed D&D rate for this container.\nRATIONALE: Poseidón Freight substituted a Non-Operating Reefer for the booked 40HDRY unit. The unit type 40NOR falls outside the scope defined in CC-1, which covers dry cargo only. No cost calculation or return recommendation may be produced.\nWHY: container_type, carrier; CC-1, CC-5, WP-6\nSOURCES: P-2066, CC-1, CC-5, WP-6\nRETURN DAY: NONE\nESCALATION: No matching policy — unit type 40NOR is not one of 20DRY, 40DRY, 40HDRY. The carrier Poseidón Freight is under contract, but the contract covers dry cargo unit types only. A contracted carrier does not make an uncovered unit type contractual. Evidence: container_type recorded as 40NOR; CC-1 lists only 20DRY, 40DRY, 40HDRY as covered; notes field states the unit was substituted for a booked 40HDRY.",
+          "usage": {
+            "input_tokens": 5016,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3188,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 512,
+            "service_tier": "standard",
+            "inference_geo": "not_available",
+            "speed": "standard"
+          }
+        }
+      ]
+    }
+  }
+}
