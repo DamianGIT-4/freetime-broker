@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Falla &amp; Co. — Freetime Broker</title>
 
 <style>
@@ -116,6 +117,11 @@ body {
   min-height: calc(100vh - 58px);
 }
 @media (max-width: 1100px) { .console { grid-template-columns: 1fr; } }
+/* Grid and flex children default to min-width:auto, so one wide table
+   stretched the whole column past the screen. With 0, the table scrolls
+   inside its own .scroll-x instead of scrolling the page. */
+.console > *, .stack > * { min-width: 0; }
+.topbar { flex-wrap: wrap; }
 
 .panel {
   background: var(--bg-raise); border: var(--border-w) solid var(--line);
@@ -540,6 +546,74 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
       font-size: var(--fs-0); color: var(--ink-2); background: var(--bg-inset);
       border: var(--border-w) solid var(--line); border-radius: var(--radius-sm);
       padding: var(--sp-3); overflow-x: auto; }
+
+/* ═══ PHONE LAYOUT ═══
+   On by itself on narrow screens; the header toggle overrides it either
+   way (see applyLayout()). The desktop console is untouched: every rule
+   here is scoped to html[data-layout="phone"].
+
+   On a phone the job is triage and the decision, not the full review.
+   Panels stack warehouses → review → settings → log, and the review
+   panel leads with one card per container (renderPhoneReview()). */
+html[data-layout="phone"] .topbar {
+  flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-3);
+}
+html[data-layout="phone"] .topbar .product { flex-basis: 100%; }
+html[data-layout="phone"] .topbar .meta { display: none; }
+html[data-layout="phone"] #layout-toggle { margin-left: auto; }
+
+html[data-layout="phone"] .console {
+  grid-template-columns: minmax(0, 1fr); gap: var(--sp-3);
+  padding: var(--sp-3); min-height: 0;
+  max-width: 520px; margin: 0 auto;   /* phone view on a laptop stays phone-width */
+}
+html[data-layout="phone"] .console .stack { display: contents; }
+html[data-layout="phone"] .console .stack > * + * { margin-top: 0; }
+html[data-layout="phone"] .panel { min-width: 0; }
+html[data-layout="phone"] #panel-warehouses { order: 1; }
+html[data-layout="phone"] #panel-main       { order: 2; }
+html[data-layout="phone"] #panel-settings   { order: 3; }
+html[data-layout="phone"] #panel-runlog     { order: 4; }
+html[data-layout="phone"] .panel-body { padding: var(--sp-3); }
+html[data-layout="phone"] #warehouse-list { max-height: none; overflow: visible; padding-right: 0; }
+
+/* Label above value instead of a 160px label column. */
+html[data-layout="phone"] .field { grid-template-columns: minmax(0, 1fr); gap: var(--sp-1); }
+
+/* Thumb-sized actions. */
+html[data-layout="phone"] .gate-btn,
+html[data-layout="phone"] .run-btn {
+  width: 100%; justify-content: center; min-height: 48px;
+  margin: 0 0 var(--sp-2); font-size: var(--fs-2);
+}
+
+.phone-card {
+  background: var(--bg-inset); border: var(--border-w) solid var(--line);
+  border-radius: var(--radius); padding: var(--sp-4); margin-top: var(--sp-3);
+}
+.phone-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+}
+.phone-card-id { font-family: var(--font-mono); font-weight: 700; font-size: var(--fs-2); }
+.phone-cost {
+  font-size: var(--fs-4); font-weight: 700; color: var(--ink);
+  margin-top: var(--sp-3); line-height: 1.1;
+}
+.phone-cost-sub { font-size: var(--fs-0); color: var(--ink-2); margin-bottom: var(--sp-3); }
+.phone-rec { color: var(--ink); margin: var(--sp-2) 0; }
+.phone-gate { margin-top: var(--sp-3); }
+.phone-back { margin-bottom: var(--sp-2); }
+/* A refused container's likely action is Escalate, so on the phone card it
+   comes first and Approve loses its filled style. Nothing is disabled:
+   the human can still approve a refusal, it is just not the big target. */
+.phone-card.is-refused .phone-gate p:has(.gate-btn) { display: flex; flex-direction: column-reverse; }
+.phone-card.is-refused .gate-btn[data-action="approve"] {
+  background: var(--bg-raise); border-color: var(--line); color: var(--ink);
+}
+.phone-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2); align-items: start; }
+.phone-row .badge { margin-top: var(--sp-1); }
+.phone-row-cost { font-family: var(--font-mono); color: var(--ink-3); }
+html[data-layout="phone"] .topbar .btn { padding: 6px 12px; }
 </style>
 
 <div class="topbar">
@@ -549,18 +623,19 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
     <button type="button" class="btn view-btn" data-view="console">Console</button>
     <button type="button" class="btn view-btn" data-view="evals">Evals</button>
   </span>
+  <button type="button" class="btn" id="layout-toggle"></button>
   <span class="meta">Weekly inbound review · Monday 2026-08-03 · <span id="world-meta"></span></span>
 </div>
 
 <div class="console" id="view-console">
 
   <div class="stack">
-    <section class="panel">
+    <section class="panel" id="panel-warehouses">
       <div class="panel-head">Warehouses<span class="sub">Weekly review · Mon 3 Aug 2026</span></div>
       <div class="panel-body"><div id="warehouse-list"></div></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="panel-settings">
       <div class="panel-head">Settings</div>
       <div class="panel-body row-gap">
         <label class="meta-line" for="api-key">Anthropic API key</label>
@@ -577,13 +652,13 @@ pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mon
     </section>
   </div>
 
-  <section class="panel">
+  <section class="panel" id="panel-main">
     <div class="panel-head" id="main-head">No case selected</div>
     <div class="panel-body" id="main"></div>
   </section>
 
   <div class="stack">
-    <section class="panel">
+    <section class="panel" id="panel-runlog">
       <div class="panel-head">Run log</div>
       <div class="panel-body row-gap">
         <div id="runlog-meta" class="meta-line"></div>
@@ -1608,15 +1683,150 @@ function renderMain() {
   html += stored ? renderOutputFields(stored.parsed, stored.meta, pricing) : waiting;
 
   /* ── 5 REVIEW ── */
-  html += stage(5, "Your decision", "Nothing happens until you approve, edit, or escalate.");
-  html += stored ? renderReview(stored.parsed, stored.meta) : waiting;
+  const review = stage(5, "Your decision", "Nothing happens until you approve, edit, or escalate.")
+    + (stored ? renderReview(stored.parsed, stored.meta) : waiting);
 
-  if (stored) {
-    html += "<details" + (stored.parsed.ok ? "" : " open") + ">"
-         + "<summary>Raw response text</summary><pre>" + esc(stored.rawText) + "</pre></details>";
+  const raw = stored
+    ? "<details" + (stored.parsed.ok ? "" : " open") + ">"
+      + "<summary>Raw response text</summary><pre>" + esc(stored.rawText) + "</pre></details>"
+    : "";
+
+  /* The phone layout leads with the decision cards and folds stages 1–4
+     into one drawer. Stage 5 is left out of that drawer on purpose: the
+     cards carry the same buttons, and drawing them twice would give two
+     editors for one decision. */
+  if (isPhoneLayout()) {
+    main.innerHTML = renderPhoneReview(c, found, pricing, state, stored, runLabel, html + raw);
+    return;
   }
 
-  main.innerHTML = html;
+  main.innerHTML = html + review + raw;
+}
+
+/* ------------------------------------------------------------------
+   PHONE REVIEW — one card per container: what it recommends, what it
+   costs, and the three buttons. The full five stages are one tap away.
+   Built from the same RESULTS, DECISIONS and pricing as the console, so
+   a decision made here is the same decision on the desktop.
+   ------------------------------------------------------------------ */
+
+function renderPhoneReview(c, found, pricing, state, stored, runLabel, stagesHtml) {
+  let html = "<p class=\"phone-back\"><a class=\"meta-line\" href=\"#panel-warehouses\">"
+    + "&larr; Warehouses</a></p>";
+
+  if (!stored) {
+    html += "<p class=\"meta-line\">" + found.length + " container"
+      + (found.length === 1 ? "" : "s") + " with no return booked. The agent prices each"
+      + " one and recommends; nothing happens until you decide.</p>";
+
+    html += found.map(container => {
+      const entry = pricing.scoped.find(e => e.container.container_id === container.container_id);
+      const reason = reviewReasonBadge(container.container_id, pricing);
+      const cost = entry && entry.priced && entry.priced.cheapest
+        ? formatEur(entry.priced.cheapest.total) : "";
+      /* Grid, not the float the sidebar lanes use: when the badge wraps,
+         a floated figure drifts onto the next container's row. */
+      return "<div class=\"container-row phone-row\"><div><span class=\"mono\">"
+        + esc(container.container_id) + "</span> · " + esc(container.carrier)
+        + (container.days_left !== "" ? " · " + esc(container.days_left) + "d left" : " · days unknown")
+        + (reason ? "<div>" + badge(reason.label, reason.kind) + "</div>" : "")
+        + "</div><span class=\"phone-row-cost\">" + cost + "</span></div>";
+    }).join("");
+
+    html += "<p class=\"foot\"><button type=\"button\" class=\"btn primary run-btn\" data-case=\""
+      + esc(c.case_id) + "\"" + (state.running ? " disabled" : "") + ">" + runLabel + "</button></p>";
+
+    if (!getApiKey()) {
+      html += "<div class=\"error-note\">Add your Anthropic API key in Settings, below this"
+        + " review, or the run will fail.</div>";
+    }
+    if (state.running) {
+      html += "<p><span class=\"thinking\">Asking " + esc(MODEL) + "…</span></p>";
+    } else if (state.error) {
+      html += "<div class=\"error-note\"><strong>The run failed.</strong><br>"
+        + esc(state.error) + "</div>";
+    }
+  } else {
+    const parsed = stored.parsed;
+    const pending = parsed.blocks.filter(fields =>
+      !getDecision(decisionKey(stored.meta.caseId, fields.CONTAINER || "(no container id)")).action
+    ).length;
+
+    html += "<p>" + statusBadge(parsed.runStatus) + " <span class=\"meta-line\">" + pending
+      + " of " + parsed.blocks.length + " still need a decision</span></p>";
+    if (parsed.summary) html += "<p class=\"meta-line\">" + esc(parsed.summary) + "</p>";
+    if (!parsed.ok) {
+      html += "<div class=\"error-note\"><strong>Agent output did not match format.</strong> "
+        + esc(parsed.problems.join("; ")) + ". Open the full review below for the raw text.</div>";
+    }
+    if (!parsed.blocks.length) {
+      html += "<p class=\"muted\">The agent returned no container decisions.</p>";
+    }
+
+    html += parsed.blocks.map(fields => renderPhoneCard(stored.meta.caseId, fields, pricing)).join("");
+    html += "<p class=\"boundary-note\">Nothing is sent without human approval.</p>";
+  }
+
+  html += drawer("Full review", "stages 1–4",
+    "Everything the full console shows: the data sent, the agent's answer, every field and citation.",
+    stagesHtml);
+
+  return html;
+}
+
+function renderPhoneCard(caseId, fields, pricing) {
+  const id = fields.CONTAINER || "(no container id)";
+  const container = findContainer(id);
+  const decision = getDecision(decisionKey(caseId, id));
+  const entry = pricing && pricing.scoped.find(e => e.container.container_id === id);
+  const refused = fields._status === "REFUSED-ESCALATE";
+  const rec = decision.recommendation !== null ? decision.recommendation : (fields.RECOMMENDATION || "");
+  const day = decision.returnDay !== null ? decision.returnDay : (fields["RETURN DAY"] || "");
+
+  let html = "<article class=\"phone-card" + (refused ? " is-refused" : "") + "\">"
+    + "<div class=\"phone-card-head\"><span class=\"phone-card-id\">" + esc(id) + "</span>"
+    + statusBadge(fields._status) + "</div>";
+
+  if (container) {
+    html += "<div class=\"meta-line\">" + esc(container.carrier) + " · " + esc(container.container_type)
+      + (container.days_left !== "" ? " · " + esc(container.days_left) + " days left" : " · days unknown")
+      + "</div>";
+  }
+
+  /* The cost the engine computed, never the model's restatement of it. */
+  const priced = entry && !entry.refuse ? entry.priced : null;
+  if (!refused && priced && priced.cheapest) {
+    const others = priced.levers
+      .filter(l => l.available && l.name !== priced.cheapest.name)
+      .sort((a, b) => a.total - b.total);
+    html += "<div class=\"phone-cost\">" + formatEur(priced.cheapest.total) + "</div>"
+      + "<div class=\"phone-cost-sub\">" + esc(priced.cheapest.name)
+      + (priced.tie ? " · tied with " + esc(priced.tie.filter(n => n !== priced.cheapest.name).join(", ")) : "")
+      + (others.length && !priced.tie
+          ? " · saves " + formatEur(others[0].total - priced.cheapest.total) + " vs " + esc(others[0].name)
+          : "")
+      + "</div>";
+  }
+
+  if (refused) {
+    html += "<div class=\"error-note\">Refused &mdash; " + esc(refusalReason(fields)) + "</div>";
+  } else {
+    html += "<div class=\"phone-rec\">" + esc(rec || "(no recommendation)") + "</div>";
+    if (day) {
+      html += "<div class=\"meta-line\">Return day: <strong>" + esc(day) + "</strong>"
+        + (decision.returnDay !== null && decision.returnDay !== fields["RETURN DAY"] ? " (edited)" : "")
+        + "</div>";
+    }
+  }
+
+  html += "<div class=\"phone-gate\">" + renderGate(caseId, fields, decision) + "</div>";
+
+  const why = "<div class=\"field\"><div class=\"k\">Why</div><div class=\"v why\">"
+    + esc(fields.RATIONALE || fields.WHY || "(no reasons given)") + "</div></div>";
+  html += drawer("Options and reasons", "", "",
+    (priced ? renderOptionsComparison(priced) || "" : "") + why + renderCitationTags(fields));
+
+  return html + "</article>";
 }
 
 /* ------------------------------------------------------------------
@@ -1840,7 +2050,63 @@ function renderEvals() {
 /* Two views, one at a time: the working console, and the evals scoreboard. */
 let VIEW = "console";
 
+/* ------------------------------------------------------------------
+   LAYOUT — phone or full console.
+
+   Automatic by default: narrow screens get the phone layout. The header
+   toggle overrides it either way, and the override is remembered in this
+   browser. Choosing the layout the screen would have picked anyway clears
+   the override, so a phone that was switched to the full console once
+   does not stay stuck there forever.
+   ------------------------------------------------------------------ */
+
+const LAYOUT_STORAGE = "falla_layout";
+/* The eval runner evaluates this file in a bare sandbox with no
+   matchMedia; there it is simply never a phone. */
+const PHONE_QUERY = typeof window.matchMedia === "function"
+  ? window.matchMedia("(max-width: 700px)")
+  : { matches: false, addEventListener() {} };
+let LAYOUT_FALLBACK = null;   /* used only when localStorage throws */
+
+function layoutPref() {
+  if (LAYOUT_FALLBACK) return LAYOUT_FALLBACK;
+  try { return localStorage.getItem(LAYOUT_STORAGE) || "auto"; }
+  catch (err) { return "auto"; }
+}
+
+function isPhoneLayout() {
+  const pref = layoutPref();
+  return pref === "phone" || (pref === "auto" && PHONE_QUERY.matches);
+}
+
+function applyLayout() {
+  const phone = isPhoneLayout();
+  document.documentElement.setAttribute("data-layout", phone ? "phone" : "full");
+  const toggle = document.getElementById("layout-toggle");
+  toggle.textContent = phone ? "Full console" : "Phone view";
+  toggle.title = phone
+    ? "Show every stage, table and panel"
+    : "One card per container, with large approve, edit and escalate buttons";
+}
+
+function toggleLayout() {
+  const want = isPhoneLayout() ? "full" : "phone";
+  const automatic = PHONE_QUERY.matches ? "phone" : "full";
+  try {
+    if (want === automatic) localStorage.removeItem(LAYOUT_STORAGE);
+    else localStorage.setItem(LAYOUT_STORAGE, want);
+  } catch (err) { /* storage blocked: the switch still works for this visit */
+    LAYOUT_FALLBACK = want;
+  }
+  renderConsole();
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("layout-toggle").addEventListener("click", toggleLayout);
+PHONE_QUERY.addEventListener("change", function () { renderConsole(); });
+
 function renderView() {
+  applyLayout();
   document.getElementById("view-console").hidden = VIEW !== "console";
   document.getElementById("view-evals").hidden = VIEW !== "evals";
   document.querySelectorAll(".view-btn").forEach(button => {
@@ -3243,6 +3509,11 @@ document.addEventListener("click", function (event) {
     if (id !== SELECTED_CASE) {
       event.preventDefault();
       selectCase(id, false);
+      /* On a phone the review sits below the list, out of sight. Take
+         the reader to it; "← Warehouses" at its top brings them back. */
+      if (isPhoneLayout()) {
+        document.getElementById("panel-main").scrollIntoView({ block: "start" });
+      }
     }
     return;
   }
