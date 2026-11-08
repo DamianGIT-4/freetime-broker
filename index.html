@@ -599,25 +599,87 @@ html[data-layout="phone"] .run-btn {
   font-size: var(--fs-4); font-weight: 700; color: var(--ink);
   margin-top: var(--sp-3); line-height: 1.1;
 }
-.phone-cost-sub { font-size: var(--fs-0); color: var(--ink-2); margin-bottom: var(--sp-3); }
-.phone-rec { color: var(--ink); margin: var(--sp-2) 0; }
 .phone-gate { margin-top: var(--sp-3); }
 .phone-back { margin-bottom: var(--sp-2); }
-/* A refused container's likely action is Escalate, so on the phone card it
-   comes first and Approve loses its filled style. Nothing is disabled:
-   the human can still approve a refusal, it is just not the big target. */
-.phone-card.is-refused .phone-gate p:has(.gate-btn) { display: flex; flex-direction: column-reverse; }
-.phone-card.is-refused .gate-btn[data-action="approve"] {
-  background: var(--bg-raise); border-color: var(--line); color: var(--ink);
-}
-.phone-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2); align-items: start; }
-.phone-row .badge { margin-top: var(--sp-1); }
-.phone-row-cost { font-family: var(--font-mono); color: var(--ink-3); }
 html[data-layout="phone"] .topbar .btn { padding: 6px 12px; }
+
+/* ── Phone: an app, not a page ──────────────────────────────────────
+   One screen at a time (data-screen, set in applyLayout()): the
+   warehouse list, or one warehouse's review. Short labels; anything
+   longer than a line sits behind a Details drawer. */
+html[data-layout="phone"] .topbar {
+  position: sticky; top: 0; z-index: 5; flex-wrap: nowrap;
+}
+html[data-layout="phone"] .topbar .product { flex-basis: auto; font-size: var(--fs-2); }
+html[data-layout="phone"] .topbar .product-org,
+html[data-layout="phone"] #view-switch,
+html[data-layout="phone"] #panel-runlog { display: none; }
+
+html[data-layout="phone"][data-screen="home"] #panel-main,
+html[data-layout="phone"][data-screen="review"] #panel-warehouses,
+html[data-layout="phone"][data-screen="review"] #panel-settings { display: none; }
+
+/* Warehouse list: each warehouse is one tappable card. The review drawer
+   navigates instead of expanding, and booked returns stay in Full console. */
+html[data-layout="phone"] #panel-warehouses .panel-head .sub { display: none; }
+html[data-layout="phone"] .case-drawer .drawer-body,
+html[data-layout="phone"] #warehouse-list .drawer:not(.case-drawer),
+html[data-layout="phone"] .occ-num { display: none; }
+html[data-layout="phone"] .warehouse-section {
+  border-bottom: var(--border-w) solid var(--line); padding-bottom: var(--sp-3);
+}
+html[data-layout="phone"] .warehouse-section:last-child { border-bottom: none; padding-bottom: 0; }
+html[data-layout="phone"] .case-drawer > summary { min-height: 44px; }
+
+/* Review screen */
+.phone-back {
+  background: none; border: none; color: var(--accent); padding: 0;
+  font: inherit; font-weight: 700; cursor: pointer; min-height: 32px;
+  margin-bottom: var(--sp-2);
+}
+html[data-layout="phone"] #main-head .sub { display: none; }
+
+.phone-list { display: flex; flex-direction: column; }
+.phone-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) 0; border-bottom: var(--border-w) solid var(--line);
+}
+.phone-item:last-child { border-bottom: none; }
+.phone-item-main { display: flex; flex-direction: column; min-width: 0; }
+.phone-item-id { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+.phone-item-sub { font-size: var(--fs-0); color: var(--ink-3); }
+.phone-item-cost { font-family: var(--font-mono); color: var(--ink-2); min-width: 48px; text-align: right; }
+
+/* The one action on the screen stays under the thumb. */
+.phone-actionbar {
+  position: sticky; bottom: 0; z-index: 4;
+  margin: var(--sp-3) calc(-1 * var(--sp-3)) 0; padding: var(--sp-3);
+  background: var(--bg-raise); border-top: var(--border-w) solid var(--line);
+}
+.phone-actionbar .run-btn { margin: 0; }
+.phone-status { margin: 0 0 var(--sp-2); font-size: var(--fs-0); color: var(--ink-2); text-align: center; }
+
+.phone-progress {
+  display: flex; align-items: center; gap: var(--sp-3);
+  font-size: var(--fs-0); color: var(--ink-2); white-space: nowrap;
+}
+.phone-progress .occ-track { flex: 1; }
+
+.phone-card.is-decided { opacity: .75; }
+.phone-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
+.phone-chips .chip.saving { color: var(--ok); }
+.phone-refusal { color: var(--danger); font-weight: 700; margin-top: var(--sp-3); }
+.phone-gate-row { display: flex; gap: var(--sp-2); }
+html[data-layout="phone"] .phone-gate-row .gate-btn {
+  flex: 1; min-height: 44px; font-size: var(--fs-1); margin: 0;
+}
+html[data-layout="phone"] .phone-primary { margin-bottom: var(--sp-2); }
+.phone-card .drawer { margin-top: var(--sp-3); }
 </style>
 
 <div class="topbar">
-  <span class="product">Falla &amp; Co. · Freetime Broker</span>
+  <span class="product"><span class="product-org">Falla &amp; Co. · </span>Freetime Broker</span>
   <span class="badge neutral" id="key-badge">no key</span>
   <span id="view-switch">
     <button type="button" class="btn view-btn" data-view="console">Console</button>
@@ -1711,120 +1773,144 @@ function renderMain() {
    ------------------------------------------------------------------ */
 
 function renderPhoneReview(c, found, pricing, state, stored, runLabel, stagesHtml) {
-  let html = "<p class=\"phone-back\"><a class=\"meta-line\" href=\"#panel-warehouses\">"
-    + "&larr; Warehouses</a></p>";
+  let html = "<button type=\"button\" class=\"phone-back\" aria-label=\"Back to warehouses\">"
+    + "&larr; Warehouses</button>";
 
   if (!stored) {
-    html += "<p class=\"meta-line\">" + found.length + " container"
-      + (found.length === 1 ? "" : "s") + " with no return booked. The agent prices each"
-      + " one and recommends; nothing happens until you decide.</p>";
-
-    html += found.map(container => {
+    html += "<div class=\"phone-list\">" + found.map(container => {
       const entry = pricing.scoped.find(e => e.container.container_id === container.container_id);
       const reason = reviewReasonBadge(container.container_id, pricing);
       const cost = entry && entry.priced && entry.priced.cheapest
-        ? formatEur(entry.priced.cheapest.total) : "";
-      /* Grid, not the float the sidebar lanes use: when the badge wraps,
-         a floated figure drifts onto the next container's row. */
-      return "<div class=\"container-row phone-row\"><div><span class=\"mono\">"
-        + esc(container.container_id) + "</span> · " + esc(container.carrier)
-        + (container.days_left !== "" ? " · " + esc(container.days_left) + "d left" : " · days unknown")
-        + (reason ? "<div>" + badge(reason.label, reason.kind) + "</div>" : "")
-        + "</div><span class=\"phone-row-cost\">" + cost + "</span></div>";
-    }).join("");
+        ? formatEur(entry.priced.cheapest.total) : "—";
+      return "<div class=\"phone-item\">"
+        + "<div class=\"phone-item-main\"><span class=\"phone-item-id\">" + esc(container.container_id)
+        + "</span><span class=\"phone-item-sub\">"
+        + (container.days_left !== "" ? esc(container.days_left) + "d left" : "days unknown")
+        + "</span></div>"
+        + (reason ? badge(reason.label, reason.kind) : "<span></span>")
+        + "<span class=\"phone-item-cost\">" + cost + "</span></div>";
+    }).join("") + "</div>";
 
-    html += "<p class=\"foot\"><button type=\"button\" class=\"btn primary run-btn\" data-case=\""
-      + esc(c.case_id) + "\"" + (state.running ? " disabled" : "") + ">" + runLabel + "</button></p>";
-
-    if (!getApiKey()) {
-      html += "<div class=\"error-note\">Add your Anthropic API key in Settings, below this"
-        + " review, or the run will fail.</div>";
-    }
+    html += "<div class=\"phone-actionbar\">";
     if (state.running) {
-      html += "<p><span class=\"thinking\">Asking " + esc(MODEL) + "…</span></p>";
+      html += "<p class=\"phone-status\"><span class=\"thinking\">Reviewing…</span></p>";
     } else if (state.error) {
-      html += "<div class=\"error-note\"><strong>The run failed.</strong><br>"
-        + esc(state.error) + "</div>";
+      html += "<div class=\"error-note\">" + esc(state.error) + "</div>";
+    } else if (!getApiKey()) {
+      html += "<p class=\"phone-status\">Add an API key on the Warehouses screen first.</p>";
     }
+    html += "<button type=\"button\" class=\"btn primary run-btn\" data-case=\"" + esc(c.case_id) + "\""
+      + (state.running ? " disabled" : "") + ">Review " + found.length + " container"
+      + (found.length === 1 ? "" : "s") + "</button></div>";
   } else {
     const parsed = stored.parsed;
-    const pending = parsed.blocks.filter(fields =>
-      !getDecision(decisionKey(stored.meta.caseId, fields.CONTAINER || "(no container id)")).action
+    const total = parsed.blocks.length;
+    const decided = parsed.blocks.filter(fields =>
+      getDecision(decisionKey(stored.meta.caseId, fields.CONTAINER || "(no container id)")).action
     ).length;
 
-    html += "<p>" + statusBadge(parsed.runStatus) + " <span class=\"meta-line\">" + pending
-      + " of " + parsed.blocks.length + " still need a decision</span></p>";
-    if (parsed.summary) html += "<p class=\"meta-line\">" + esc(parsed.summary) + "</p>";
-    if (!parsed.ok) {
-      html += "<div class=\"error-note\"><strong>Agent output did not match format.</strong> "
-        + esc(parsed.problems.join("; ")) + ". Open the full review below for the raw text.</div>";
-    }
-    if (!parsed.blocks.length) {
-      html += "<p class=\"muted\">The agent returned no container decisions.</p>";
-    }
+    html += "<div class=\"phone-progress\"><span>" + decided + " of " + total + " decided</span>"
+      + "<div class=\"occ-track\"><div class=\"occ-fill ok\" style=\"width:"
+      + (total ? Math.round(decided / total * 100) : 0) + "%\"></div></div></div>";
 
+    if (!parsed.ok) {
+      html += "<div class=\"error-note\">The answer didn't match the expected format. See Full review.</div>";
+    }
     html += parsed.blocks.map(fields => renderPhoneCard(stored.meta.caseId, fields, pricing)).join("");
-    html += "<p class=\"boundary-note\">Nothing is sent without human approval.</p>";
   }
 
-  html += drawer("Full review", "stages 1–4",
-    "Everything the full console shows: the data sent, the agent's answer, every field and citation.",
-    stagesHtml);
-
+  html += drawer("Full review", "", "", stagesHtml);
   return html;
+}
+
+/* "2026-08-05" → "5 Aug". Anything that is not an ISO date (an edited
+   free-text return day, say) is shown as written. */
+function shortDate(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).trim());
+  if (!m) return value;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return Number(m[3]) + " " + months[Number(m[2]) - 1];
 }
 
 function renderPhoneCard(caseId, fields, pricing) {
   const id = fields.CONTAINER || "(no container id)";
+  const key = decisionKey(caseId, id);
+  const attrs = "data-key=\"" + esc(key) + "\"";
   const container = findContainer(id);
-  const decision = getDecision(decisionKey(caseId, id));
+  const decision = getDecision(key);
   const entry = pricing && pricing.scoped.find(e => e.container.container_id === id);
   const refused = fields._status === "REFUSED-ESCALATE";
+  const priced = entry && !entry.refuse ? entry.priced : null;
   const rec = decision.recommendation !== null ? decision.recommendation : (fields.RECOMMENDATION || "");
   const day = decision.returnDay !== null ? decision.returnDay : (fields["RETURN DAY"] || "");
 
-  let html = "<article class=\"phone-card" + (refused ? " is-refused" : "") + "\">"
-    + "<div class=\"phone-card-head\"><span class=\"phone-card-id\">" + esc(id) + "</span>"
-    + statusBadge(fields._status) + "</div>";
+  /* The chip shows the human's decision once there is one, the agent's
+     status until then. */
+  const state = gateState(key);
+  const chip = decision.action
+    ? badge(decision.action.indexOf("Escalated") === 0 ? "Escalated" : decision.action,
+        decision.action === "Approved" ? "ok" : decision.action === "Edited" ? "warn" : "danger")
+    : refused ? badge("Refused", "danger") : "";
+
+  let html = "<article class=\"phone-card" + (refused ? " is-refused" : "")
+    + (decision.action ? " is-decided" : "") + "\">"
+    + "<div class=\"phone-card-head\"><span class=\"phone-card-id\">" + esc(id) + "</span>" + chip + "</div>";
 
   if (container) {
-    html += "<div class=\"meta-line\">" + esc(container.carrier) + " · " + esc(container.container_type)
-      + (container.days_left !== "" ? " · " + esc(container.days_left) + " days left" : " · days unknown")
-      + "</div>";
-  }
-
-  /* The cost the engine computed, never the model's restatement of it. */
-  const priced = entry && !entry.refuse ? entry.priced : null;
-  if (!refused && priced && priced.cheapest) {
-    const others = priced.levers
-      .filter(l => l.available && l.name !== priced.cheapest.name)
-      .sort((a, b) => a.total - b.total);
-    html += "<div class=\"phone-cost\">" + formatEur(priced.cheapest.total) + "</div>"
-      + "<div class=\"phone-cost-sub\">" + esc(priced.cheapest.name)
-      + (priced.tie ? " · tied with " + esc(priced.tie.filter(n => n !== priced.cheapest.name).join(", ")) : "")
-      + (others.length && !priced.tie
-          ? " · saves " + formatEur(others[0].total - priced.cheapest.total) + " vs " + esc(others[0].name)
-          : "")
-      + "</div>";
+    html += "<div class=\"phone-item-sub\">" + esc(container.carrier) + " · " + esc(container.container_type)
+      + (container.days_left !== "" ? " · " + esc(container.days_left) + "d left" : "") + "</div>";
   }
 
   if (refused) {
-    html += "<div class=\"error-note\">Refused &mdash; " + esc(refusalReason(fields)) + "</div>";
-  } else {
-    html += "<div class=\"phone-rec\">" + esc(rec || "(no recommendation)") + "</div>";
-    if (day) {
-      html += "<div class=\"meta-line\">Return day: <strong>" + esc(day) + "</strong>"
-        + (decision.returnDay !== null && decision.returnDay !== fields["RETURN DAY"] ? " (edited)" : "")
-        + "</div>";
-    }
+    /* The trigger name only; the full reason is one tap away. */
+    const summary = agentDecisionSummary(fields).replace(/^REFUSED-ESCALATE\s*\(?|\)$/g, "");
+    html += "<div class=\"phone-refusal\">" + esc(summary || "No contractual basis to price this") + "</div>";
+  } else if (priced && priced.cheapest) {
+    const next = priced.levers
+      .filter(l => l.available && l.name !== priced.cheapest.name)
+      .sort((a, b) => a.total - b.total)[0];
+    const name = priced.cheapest.name.charAt(0).toUpperCase() + priced.cheapest.name.slice(1);
+    html += "<div class=\"phone-cost\">" + formatEur(priced.cheapest.total) + "</div>"
+      + "<div class=\"phone-chips\"><span class=\"chip\">" + esc(name) + "</span>"
+      + (day ? "<span class=\"chip\">Return " + esc(shortDate(day)) + "</span>" : "")
+      + (next && !priced.tie ? "<span class=\"chip saving\">&minus;" + formatEur(next.total - priced.cheapest.total)
+          + " vs " + esc(next.name) + "</span>" : "")
+      + (priced.tie ? "<span class=\"chip\">tie</span>" : "")
+      + "</div>";
   }
 
-  html += "<div class=\"phone-gate\">" + renderGate(caseId, fields, decision) + "</div>";
+  if (decision.error) html += "<div class=\"error-note\">" + esc(decision.error) + "</div>";
 
-  const why = "<div class=\"field\"><div class=\"k\">Why</div><div class=\"v why\">"
-    + esc(fields.RATIONALE || fields.WHY || "(no reasons given)") + "</div></div>";
-  html += drawer("Options and reasons", "", "",
-    (priced ? renderOptionsComparison(priced) || "" : "") + why + renderCitationTags(fields));
+  /* Edit and escalate open the same inline forms as the full console. */
+  if (decision.editing || decision.escalating) {
+    html += "<div class=\"phone-gate\">" + renderGate(caseId, fields, decision) + "</div>";
+  } else {
+    const primary = refused ? "escalate" : "approve";
+    const secondary = refused ? ["approve", "edit"] : ["edit", "escalate"];
+    const label = { approve: "Approve", edit: "Edit", escalate: "Escalate" };
+    const big = decision.action
+      ? ""
+      : "<button type=\"button\" class=\"btn " + (refused ? "danger" : "primary")
+        + " gate-btn phone-primary\" data-action=\"" + primary + "\" " + attrs + ">"
+        + label[primary] + "</button>";
+    const small = (decision.action ? ["approve", "edit", "escalate"].filter(a =>
+        !(a === "approve" && decision.action === "Approved")) : secondary)
+      .map(a => "<button type=\"button\" class=\"btn gate-btn\" data-action=\"" + a + "\" " + attrs + ">"
+        + label[a] + "</button>").join("");
+    html += "<div class=\"phone-gate\">" + big + "<div class=\"phone-gate-row\">" + small + "</div></div>";
+  }
+
+  const detail = (refused ? "<div class=\"field\"><div class=\"k\">Refusal</div><div class=\"v\">"
+      + esc(refusalReason(fields)) + "</div></div>" : "")
+    + (!refused && rec ? "<div class=\"field\"><div class=\"k\">Recommendation</div><div class=\"v\">"
+      + esc(rec) + "</div></div>" : "")
+    + (priced ? renderOptionsComparison(priced) || "" : "")
+    + "<div class=\"field\"><div class=\"k\">Why</div><div class=\"v why\">"
+    + esc(fields.RATIONALE || fields.WHY || "(no reasons given)") + "</div></div>"
+    + renderCitationTags(fields)
+    + (decision.note ? "<p class=\"meta-line\">Note: " + esc(decision.note) + "</p>" : "")
+    + "<p class=\"meta-line\">" + esc(state) + "</p>";
+  html += drawer("Details", "", "", detail);
 
   return html + "</article>";
 }
@@ -2082,6 +2168,9 @@ function isPhoneLayout() {
 function applyLayout() {
   const phone = isPhoneLayout();
   document.documentElement.setAttribute("data-layout", phone ? "phone" : "full");
+  /* The phone shows one screen at a time: the warehouse list, or one
+     warehouse's review. The full console shows everything at once. */
+  document.documentElement.setAttribute("data-screen", SELECTED_CASE ? "review" : "home");
   const toggle = document.getElementById("layout-toggle");
   toggle.textContent = phone ? "Full console" : "Phone view";
   toggle.title = phone
@@ -3509,12 +3598,17 @@ document.addEventListener("click", function (event) {
     if (id !== SELECTED_CASE) {
       event.preventDefault();
       selectCase(id, false);
-      /* On a phone the review sits below the list, out of sight. Take
-         the reader to it; "← Warehouses" at its top brings them back. */
-      if (isPhoneLayout()) {
-        document.getElementById("panel-main").scrollIntoView({ block: "start" });
-      }
+      /* On a phone, selecting swaps the screen to the review. Start it
+         at the top; the back button returns to the list. */
+      if (isPhoneLayout()) window.scrollTo(0, 0);
     }
+    return;
+  }
+
+  if (event.target.closest(".phone-back")) {
+    SELECTED_CASE = null;
+    renderConsole();
+    window.scrollTo(0, 0);
     return;
   }
 
